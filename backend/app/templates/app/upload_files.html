@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Upload your study files (max 20)</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="files" multiple>
+    <button type="submit">Upload & Generate Plan</button>
+</form>
+{% endblock %}

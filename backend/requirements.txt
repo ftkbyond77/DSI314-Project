@@ -1,0 +1,8 @@
+Django==4.2.24
+djangorestframework
+psycopg2-binary
+python-dotenv
+openai
+pinecone
+langchain
+langchain_community

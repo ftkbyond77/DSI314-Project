@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Piority Task Agentic AI</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'app/styles.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Piority Task Agentic AI</h1>
+        <nav>
+            <a href="{% url 'index' %}">Home</a> |
+            <a href="{% url 'upload_files' %}">Upload Files</a> |
+            <a href="{% url 'view_plan' %}">View Plan</a> |
+            <a href="/admin/">Admin</a>
+        </nav>
+        <hr>
+    </header>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    <footer>
+        <hr>
+        <p>&copy; 2025 Piority Task Demo</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Your Study Plan</h2>
+<pre>{{ plan }}</pre>
+<a href="{% url 'upload_files' %}">Upload More Files</a>
+{% endblock %}
