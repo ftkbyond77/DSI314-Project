@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Quiz from {{ file.file_name }}</h2>
+<pre>{{ quiz }}</pre>
+<a href="{% url 'view_plan' %}">Back to Plan</a>
+{% endblock %}
