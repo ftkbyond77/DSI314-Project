@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+
+# Django
+staticfiles/
+media/
+
+# Editors
+.vscode/
+.cursor/
+
+# Byte-compiled / optimized / DLL files
+*.pyo
+*.so
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+

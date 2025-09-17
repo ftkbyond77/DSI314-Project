@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upload Documents</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Upload up to 5 files</h1>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="file" name="files" multiple accept=".pdf,.txt,.md,.csv,.doc,.docx" id="fileInput" />
+      <div id="fileInfo" style="margin-top: 0.5rem; display: none;">
+        <strong id="fileCount">0</strong> files selected (max 5)
+        <span id="remainingCount">, <strong>5</strong> remaining</span>
+        <ul id="fileList" style="list-style: none; padding-left: 0; margin-top: 0.5rem;"></ul>
+      </div>
+      <button type="submit">Upload</button>
+    </form>
+    <p><a href="{% url 'assistant:home' %}">Back home</a></p>
+  </main>
+  <script>
+    let selectedFiles = [];
+    const MAX_FILES = 5;
+
+    function updateDisplay() {
+      const fileInfo = document.getElementById('fileInfo');
+      const fileCount = document.getElementById('fileCount');
+      const fileList = document.getElementById('fileList');
+      const remainingCount = document.getElementById('remainingCount');
+      
+      if (selectedFiles.length > 0) {
+        fileInfo.style.display = 'block';
+        fileCount.textContent = selectedFiles.length;
+        remainingCount.innerHTML = `, <strong>${MAX_FILES - selectedFiles.length}</strong> remaining`;
+        
+        fileList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+          const li = document.createElement('li');
+          li.style.display = 'flex';
+          li.style.alignItems = 'center';
+          li.style.justifyContent = 'space-between';
+          li.style.gap = '0.5rem';
+          li.style.marginBottom = '0.25rem';
+          
+          const name = document.createElement('span');
+          name.textContent = file.name;
+          name.style.wordBreak = 'break-word';
+          
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = '✕';
+          removeBtn.style.border = 'none';
+          removeBtn.style.background = 'transparent';
+          removeBtn.style.cursor = 'pointer';
+          removeBtn.style.fontSize = '1rem';
+          removeBtn.style.color = '#c00';
+          removeBtn.title = 'Remove file';
+          
+          removeBtn.addEventListener('click', function() {
+            selectedFiles.splice(index, 1);
+            updateFileInput();
+            updateDisplay();
+          });
+          
+          li.appendChild(name);
+          li.appendChild(removeBtn);
+          fileList.appendChild(li);
+        });
+      } else {
+        fileInfo.style.display = 'none';
+      }
+    }
+
+    function updateFileInput() {
+      const fileInput = document.getElementById('fileInput');
+      const dt = new DataTransfer();
+      selectedFiles.forEach(file => dt.items.add(file));
+      fileInput.files = dt.files;
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const newFiles = Array.from(e.target.files);
+      
+      // เพิ่มไฟล์ใหม่เข้ากับไฟล์เก่า โดยไม่ให้ซ้ำ
+      newFiles.forEach(newFile => {
+        const isDuplicate = selectedFiles.some(existingFile => 
+          existingFile.name === newFile.name && 
+          existingFile.size === newFile.size &&
+          existingFile.lastModified === newFile.lastModified
+        );
+        
+        if (!isDuplicate && selectedFiles.length < MAX_FILES) {
+          selectedFiles.push(newFile);
+        }
+      });
+      
+      // ถ้าเกิน MAX_FILES ให้ตัดออก
+      if (selectedFiles.length > MAX_FILES) {
+        selectedFiles = selectedFiles.slice(0, MAX_FILES);
+      }
+      
+      updateFileInput();
+      updateDisplay();
+    });
+  </script>
+</body>
+</html>
