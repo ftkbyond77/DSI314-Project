@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1>PDF Test Dashboard</h1>
+    <p>ทดสอบอัปโหลดไฟล์ PDF / TXT แล้วให้ Agent จัดการ</p>
+    <a href="{% url 'upload_files' %}" class="btn">Upload Files</a>
+    <a href="{% url 'view_plan' %}" class="btn">View Last Plan</a>
+</div>
+{% endblock %}

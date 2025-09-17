@@ -6,3 +6,5 @@ openai
 pinecone
 langchain
 langchain_community
+# PyMuPDF>=1.22.5
+pdfplumber>=0.9.0
