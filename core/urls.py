@@ -1,14 +1,14 @@
-from django.urls import path, include
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework.routers import DefaultRouter
-from .views import UploadViewSet, PlanViewSet
-
-router = DefaultRouter()
-router.register(r"uploads", UploadViewSet, basename="upload")
-router.register(r"plans", PlanViewSet, basename="plan")
+# core/urls.py
+from django.urls import path
+# from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from . import views  
 
 urlpatterns = [
-    path("", include(router.urls)),
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('', views.upload_page, name='upload_page'),  # root path
+    path('upload/', views.upload_page, name='upload_page'),
+    path('result/', views.result_page, name='result_page'),
+    path('register/', views.register_page, name='register_page'),
+    path('login/', views.login_page, name='login_page'),
+    path('logout/', views.logout_view, name='logout_view'),
+
 ]

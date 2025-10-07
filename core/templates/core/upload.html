@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Assistant - Upload & Plan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <!-- Header with Logout -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Upload PDFs for Study Plan</h1>
+            <a href="{% url 'logout_view' %}" class="text-sm text-blue-500 hover:underline">Logout</a>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 {% if message.tags == 'error' %}bg-red-100 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-100 border-l-4 border-green-500 text-green-700{% else %}bg-blue-100 border-l-4 border-blue-500 text-blue-700{% endif %} rounded">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            
+            <!-- File Upload -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select PDF Files (Max 10)</label>
+                <div class="flex items-center space-x-2 mb-2">
+                    <input type="file" name="files" multiple accept=".pdf" id="fileInput" class="hidden">
+                    <button type="button" id="addFilesBtn" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Add Files</button>
+                    <span class="text-sm text-gray-500">Click to select multiple PDFs</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500" id="fileCount">Files selected: 0 / 10</p>
+                <div id="fileList" class="mt-2 space-y-1 max-h-40 overflow-y-auto"></div>
+            </div>
+            
+            <!-- Constraint Prompt -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Optional Constraint Prompt</label>
+                <textarea name="constraint_prompt" rows="3" placeholder="e.g., Focus on exam prep and data analysis topics" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" id="submitBtn" disabled>Generate Study Plan</button>
+        </form>
+    </div>
+    
+    <script>
+        let selectedFiles = [];
+        
+        const fileInput = document.getElementById('fileInput');
+        const addFilesBtn = document.getElementById('addFilesBtn');
+        const fileCount = document.getElementById('fileCount');
+        const fileList = document.getElementById('fileList');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        
+        // Trigger file input on button click
+        addFilesBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function(e) {
+            const newFiles = Array.from(e.target.files);
+            
+            // Append new files to existing selection
+            selectedFiles = [...selectedFiles, ...newFiles];
+            
+            // Remove duplicates based on name and size
+            selectedFiles = selectedFiles.filter((file, index, self) => 
+                index === self.findIndex(f => f.name === file.name && f.size === file.size)
+            );
+            
+            updateFileDisplay();
+            updateInputFiles();
+        });
+        
+        function updateFileDisplay() {
+            const count = selectedFiles.length;
+            fileCount.textContent = `Files selected: ${count} / 10`;
+            
+            fileList.innerHTML = '';
+            
+            if (count > 10) {
+                fileCount.textContent = 'Too many files! Max 10. Please remove some.';
+                fileCount.className = 'mt-2 text-sm text-red-500 font-medium';
+                submitBtn.disabled = true;
+                return;
+            } else {
+                fileCount.className = 'mt-2 text-sm text-gray-500';
+            }
+            
+            selectedFiles.forEach((file, idx) => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded text-sm';
+                div.innerHTML = `
+                    <span class="flex-1 truncate">${file.name} <span class="text-gray-500">(${(file.size / 1024).toFixed(1)} KB)</span></span>
+                    <button type="button" onclick="removeFile(${idx})" class="ml-2 text-red-500 hover:text-red-700 font-medium">Remove</button>
+                `;
+                fileList.appendChild(div);
+            });
+            
+            submitBtn.disabled = count === 0;
+        }
+        
+        window.removeFile = function(idx) {
+            selectedFiles.splice(idx, 1);
+            updateFileDisplay();
+            updateInputFiles();
+        };
+        
+        function updateInputFiles() {
+            const dt = new DataTransfer();
+            selectedFiles.slice(0, 10).forEach(file => {
+                dt.items.add(file);
+            });
+            fileInput.files = dt.files;
+        }
+        
+        // Form submission - show loading state
+        uploadForm.addEventListener('submit', function(e) {
+            if (selectedFiles.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one PDF file.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing...';
+            addFilesBtn.disabled = true;
+            
+            // Let form submit normally
+            console.log('Form submitting with', selectedFiles.length, 'files');
+        });
+        
+        // Initial state
+        updateFileDisplay();
+    </script>
+</body>
+</html>
