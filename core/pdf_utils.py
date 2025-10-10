@@ -24,7 +24,7 @@ def get_ocr_reader():
         try:
             import easyocr
             print("Initializing EasyOCR (this may take a moment on first run)...")
-            _ocr_reader = easyocr.Reader(['en'], gpu=False)  # Set gpu=True if CUDA available
+            _ocr_reader = easyocr.Reader(['en', 'th'], gpu=False) # Set gpu=True if CUDA available
             print("OCR reader initialized")
         except ImportError:
             print("!EasyOCR not installed. OCR functionality disabled.")
