@@ -15,3 +15,6 @@ whitenoise
 langchain
 langchain-openai
 langchain-pinecone
+PyPDF2
+easyocr
+Pillow

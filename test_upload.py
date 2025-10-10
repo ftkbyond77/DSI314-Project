@@ -24,9 +24,10 @@ import warnings
 from langchain_pinecone import PineconeVectorStore
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.messages import HumanMessage
 import re
+from collections import defaultdict
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -38,24 +39,51 @@ prompt_template = """You are an AI study planner. Analyze the document chunks be
 Retrieved Documents:
 {context}
 
-Your task: Generate a JSON array ranking PDF files by study priority. Each entry needs:
-- file: the PDF filename
-- priority: number where 1 is highest priority  
-- reason: brief explanation
+Optional User Constraints:
+{user_prompt_constraints}
 
-Prioritization rules:
-1. Fundamental/technical content ranks higher
-2. Introductory material before advanced
-3. Exam content gets high priority
-4. Prerequisites before dependent topics
+Your task:
+Generate a JSON array ranking PDF files by study priority. You must:
+- Generate exactly one entry for each unique PDF file listed in Total files.
+- Avoid duplicates or missing files.
+- Summarize the entire document’s content from all its chunks first, then determine the overall priority and reason for the whole file.
+- Consider user constraints if they are provided (e.g., urgency, focus topics, exam schedules).
+
+Each entry needs:
+- file: the PDF filename
+- priority: number where 1 is highest priority
+- reason: Detailed explanation (3–4 sentences) explaining why this document has this priority level. 
+  For high priorities (e.g., 1 or 2), explain why it is essential or urgent (e.g., covers core fundamentals, prerequisites, or exam content). 
+  For lower priorities, explain why it can be studied later (e.g., more advanced, specialized, or dependent on other knowledge).
+
+Prioritization Rules (LLM-driven):
+1. **Analyze content holistically** — combine all chunks of each document before making a decision.
+2. **Core & fundamental concepts** rank higher than applied or specialized topics.
+3. **Introductory or prerequisite topics** should come before dependent or advanced topics.
+4. **Exam-related or time-sensitive content** should receive higher priority.
+5. Consider optional user constraints (e.g., deadlines, focus areas) to adjust priorities.
+6. If difficulty can be inferred (intro vs advanced), weigh difficulty appropriately — easier and foundational content usually comes earlier.
+7. If documents have similar priority levels, assign lower numbers to the most foundational or urgent ones.
+8. **Document weight by chunk count (log-scale)** — Use log(1 + chunk_count) to slightly increase priority for longer documents, avoiding overemphasis on sheer length.
 
 Return ONLY a valid JSON array with no extra text or formatting.
-Example format: [{{ "file": "example.pdf", "priority": 1, "reason": "Core fundamentals" }}]
+Example format: [
+  {{
+    "file": "fundamentals.pdf",
+    "priority": 1,
+    "reason": "This document introduces core concepts and basic principles that form the foundation of the subject. It covers essential terminology and introductory theories necessary for comprehending more complex ideas. Prioritizing this ensures learners build a strong base, reducing confusion in advanced topics and enabling better retention overall."
+  }},
+  {{
+    "file": "advanced_topics.pdf",
+    "priority": 5,
+    "reason": "This document delves into specialized and intricate subjects that require prior knowledge of basics. It explores advanced applications and case studies assuming familiarity with fundamental concepts. It is less critical initially because studying it prematurely could lead to misunderstandings; instead, it should follow after mastering prerequisites to maximize its value and depth."
+  }}
+]
 """
 
 PROMPT = PromptTemplate(
     template=prompt_template,
-    input_variables=["context"]
+    input_variables=["context", "user_prompt_constraints"]
 )
 
 def calculate_file_hash(file_path):
@@ -97,20 +125,25 @@ def print_stats():
     print("="*60 + "\n")
 
 def format_docs(docs):
-    """Format documents for prompt context."""
-    formatted = []
-    seen_files = set()
+    """Format documents for prompt context, grouped by file."""
+    file_chunks = defaultdict(list)
     for doc in docs:
         meta = doc.metadata
         filename = meta.get("file", "Unknown")
-        seen_files.add(filename)
+        file_chunks[filename].append(
+            f"Pages: {meta.get('start_page', '?')}-{meta.get('end_page', '?')}\nContent Preview: {doc.page_content[:500]}...\n"
+        )
+
+    formatted = []
+    seen_files = set(file_chunks.keys())
+    for filename in sorted(seen_files):
+        chunks_str = "\n---\n".join(file_chunks[filename])
         formatted.append(
             f"Document: {filename}\n"
-            f"Pages: {meta.get('start_page', '?')}-{meta.get('end_page', '?')}\n"
-            f"Content Preview: {doc.page_content[:500]}...\n"
+            f"Chunks:\n{chunks_str}"
         )
     result = f"Total files: {', '.join(sorted(seen_files))}\n\n"
-    result += "\n---\n".join(formatted)
+    result += "\n===\n".join(formatted)
     return result
 
 def generate_study_plan_sync(user_id, upload_ids):
@@ -140,27 +173,30 @@ def generate_study_plan_sync(user_id, upload_ids):
 
         # Build retriever with filter for current uploads
         retriever = vector_store.as_retriever(
-            search_type="similarity",
+            search_type="mmr",
             search_kwargs={
-                "k": min(15, len(filenames) * 4),
+                "k": len(filenames) * 10,
+                "fetch_k": 200,
+                "lambda_mult": 0.5,
                 "filter": {"upload_id": {"$in": [up.id for up in uploads]}}
             }
         )
 
         print("Building LCEL chain...")
-        def retrieve_and_format(input_query):
-            docs = retriever.invoke(input_query)
+        def retrieve_and_format(_):
+            docs = retriever.invoke("summarize all documents for study planning")
             return format_docs(docs)
         
         rag_chain = (
-            {"context": RunnableLambda(retrieve_and_format)}
+            {"context": RunnableLambda(retrieve_and_format), 
+            "user_prompt_constraints": RunnablePassthrough()} 
             | PROMPT
             | llm
             | StrOutputParser()
         )
 
         print("Retrieving relevant documents and generating plan...")
-        result = rag_chain.invoke("study plan")
+        result = rag_chain.invoke("Focus on exam-related materials first")
         print(f"Chain invocation completed (length={len(result)} chars)")
 
         # --- Extract JSON safely ---
