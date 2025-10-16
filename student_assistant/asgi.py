@@ -10,6 +10,9 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
 import os
 
 from django.core.asgi import get_asgi_application
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="langchain_pinecone")
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'student_assistant.settings')
 

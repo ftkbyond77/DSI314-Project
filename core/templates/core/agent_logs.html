@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Execution Logs - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .classic-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .log-entry {
+            transition: all 0.2s ease;
+        }
+        .log-entry:hover {
+            transform: translateX(4px);
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="classic-card rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-1">🔍 Agent Execution Logs</h1>
+                    <p class="text-gray-600">Real-time insights into AI agent behavior (Admin Only)</p>
+                </div>
+                <div class="text-right space-x-3">
+                    <a href="{% url 'upload_page_optimized' %}" 
+                       class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                        ← Back to Upload
+                    </a>
+                    <button onclick="location.reload()" 
+                            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-700{% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Performance Metrics -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-blue-600">{{ summary.total_calls|default:0 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Total Tool Calls</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-green-600">{{ summary.total_time_ms|default:0|floatformat:0 }}ms</div>
+                <div class="text-sm text-gray-600 mt-1">Total Time</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-purple-600">{{ summary.avg_time_per_call|default:0|floatformat:1 }}ms</div>
+                <div class="text-sm text-gray-600 mt-1">Avg per Call</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-orange-600">{{ summary.tools_used|length|default:0 }}</div>
+                <div class="text-sm text-gray-600 mt-1">Unique Tools</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-red-600">
+                    {% if performance_metrics.slowest_tool %}
+                        {{ performance_metrics.slowest_tool.duration|floatformat:0 }}ms
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                <div class="text-sm text-gray-600 mt-1">Slowest Tool</div>
+            </div>
+        </div>
+        
+        <!-- Tools Used & Performance -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Tools Used -->
+            <div class="classic-card rounded-xl p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">🔧 Tools Used</h2>
+                {% if summary.tools_used %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for tool in summary.tools_used %}
+                        <span class="px-3 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-900 rounded-lg text-sm font-semibold border border-blue-200">
+                            {{ tool }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500 text-sm">No tools executed yet</p>
+                {% endif %}
+            </div>
+            
+            <!-- Performance Stats -->
+            <div class="classic-card rounded-xl p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">⚡ Performance</h2>
+                <div class="space-y-3">
+                    {% if performance_metrics.fastest_tool %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-700">Fastest Tool:</span>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            {{ performance_metrics.fastest_tool.tool }} ({{ performance_metrics.fastest_tool.duration|floatformat:1 }}ms)
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if performance_metrics.slowest_tool %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-700">Slowest Tool:</span>
+                        <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                            {{ performance_metrics.slowest_tool.tool }} ({{ performance_metrics.slowest_tool.duration|floatformat:1 }}ms)
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-700">Total Execution:</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            {{ performance_metrics.total_execution_time|default:0|floatformat:2 }}s
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Plans -->
+        <div class="classic-card rounded-xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Recent Plans Generated</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">User</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Tasks</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Schedule</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for plan in recent_plans %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-4 py-3 text-sm font-mono text-gray-900">{{ plan.id }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ plan.user }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ plan.tasks }} items</td>
+                            <td class="px-4 py-3 text-sm">
+                                {% if plan.has_schedule %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">✓ Yes</span>
+                                {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">✗ No</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ plan.created|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">No plans generated yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Detailed Tool Logs -->
+        <div class="classic-card rounded-xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">📝 Detailed Tool Execution Log</h2>
+                <div class="space-x-2">
+                    <button onclick="expandAll()" id="expandBtn" 
+                            class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition">
+                        Expand All
+                    </button>
+                    <button onclick="collapseAll()" id="collapseBtn" 
+                            class="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded transition">
+                        Collapse All
+                    </button>
+                </div>
+            </div>
+            
+            {% if logs %}
+            <div class="space-y-3">
+                {% for log in logs %}
+                <div class="log-entry border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition" 
+                         onclick="toggleLog({{ forloop.counter }})">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">
+                                {% if log.tool == 'analyze_task_enhanced' or log.tool == 'analyze_task' %}🔍
+                                {% elif log.tool == 'compare_priority' %}⚖️
+                                {% elif log.tool == 'create_flexible_schedule' or log.tool == 'create_schedule' %}📅
+                                {% else %}🔧{% endif %}
+                            </span>
+                            <div>
+                                <div class="font-semibold text-gray-900">{{ log.tool }}</div>
+                                <div class="text-xs text-gray-500">{{ log.timestamp|date:"M d, Y H:i:s" }}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                {{ log.duration_ms }}ms
+                            </span>
+                            <svg id="arrow-{{ forloop.counter }}" class="w-5 h-5 text-gray-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div id="log-{{ forloop.counter }}" class="hidden px-4 py-4 bg-white border-t border-gray-200">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                    <span class="mr-2">📥</span> Input
+                                </h4>
+                                <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto border border-gray-200"><code>{{ log.input|pprint }}</code></pre>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-700 mb-2 flex items-center">
+                                    <span class="mr-2">📤</span> Output
+                                </h4>
+                                <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto border border-gray-200"><code>{{ log.output }}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-gray-500">
+                <div class="text-6xl mb-4">📭</div>
+                <p class="text-lg font-medium mb-2">No Execution Logs Available</p>
+                <p class="text-sm mb-4">Logs are generated when AI planning tasks are executed</p>
+                <a href="{% url 'upload_page_optimized' %}" 
+                   class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                    Upload Files to Generate Logs
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function toggleLog(id) {
+            const content = document.getElementById(`log-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+        
+        function expandAll() {
+            const logs = document.querySelectorAll('[id^="log-"]');
+            const arrows = document.querySelectorAll('[id^="arrow-"]');
+            
+            logs.forEach(log => log.classList.remove('hidden'));
+            arrows.forEach(arrow => arrow.classList.add('rotate-180'));
+        }
+        
+        function collapseAll() {
+            const logs = document.querySelectorAll('[id^="log-"]');
+            const arrows = document.querySelectorAll('[id^="arrow-"]');
+            
+            logs.forEach(log => log.classList.add('hidden'));
+            arrows.forEach(arrow => arrow.classList.remove('rotate-180'));
+        }
+    </script>
+</body>
+</html>

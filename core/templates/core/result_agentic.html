@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Plan Results - AI Student Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .classic-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .priority-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="classic-card rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">🎯 Your Study Plan</h1>
+                    <p class="text-gray-600 mt-1">AI-generated with transparent reasoning</p>
+                </div>
+                <a href="{% url 'upload_page_optimized' %}" 
+                   class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition">
+                    📚 New Plan
+                </a>
+            </div>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-50 border-l-4 border-green-500 text-green-700{% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Statistics -->
+        {% if stats %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-blue-600">{{ stats.total_files }}</div>
+                <div class="text-sm text-gray-600 mt-1">Documents</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-green-600">{{ stats.total_pages }}</div>
+                <div class="text-sm text-gray-600 mt-1">Total Pages</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-purple-600">{{ stats.total_hours }}h</div>
+                <div class="text-sm text-gray-600 mt-1">Study Time</div>
+            </div>
+            <div class="classic-card rounded-xl p-5">
+                <div class="text-3xl font-bold text-orange-600">{{ stats.utilization|floatformat:0 }}%</div>
+                <div class="text-sm text-gray-600 mt-1">Utilization</div>
+            </div>
+        </div>
+        
+        <!-- Method Used -->
+        <div class="classic-card rounded-xl p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">🤖</span>
+                    <div>
+                        <div class="font-semibold text-gray-800">Sorting Method: {{ stats.sort_method|default:"hybrid"|title }}</div>
+                        <div class="text-sm text-gray-600">Generated {{ stats.generated_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    {% if stats.categories %}
+                        Topics: {% for cat, count in stats.categories.items %}{{ cat }}({{ count }}){% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Schedule -->
+        {% if schedule %}
+        <div class="classic-card rounded-xl p-6 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <span class="mr-2">📅</span>
+                Weekly Schedule
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Day</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Task</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Duration</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Category</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for slot in schedule %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ slot.day }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ slot.time }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">{{ slot.task }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                                    {{ slot.hours }}h
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-xs">
+                                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                                    {{ slot.category|default:"general" }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Prioritized Tasks -->
+        {% if tasks %}
+        <div class="classic-card rounded-xl p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <span class="mr-2">📊</span>
+                Prioritized Study Materials
+            </h2>
+            <div class="space-y-3">
+                {% for task in tasks %}
+                <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition">
+                    <div class="flex items-start">
+                        <div class="priority-badge w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 flex-shrink-0">
+                            {{ task.priority }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-bold text-lg text-gray-900 truncate">{{ task.file }}</h3>
+                                <div class="flex space-x-2 ml-4">
+                                    <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                        {{ task.category|default:"general" }}
+                                    </span>
+                                    <span class="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-medium">
+                                        Level {{ task.complexity|default:5 }}/10
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-4 text-sm text-gray-600 mb-3">
+                                <span>📄 {{ task.pages }} pages</span>
+                                <span>📦 {{ task.chunk_count }} sections</span>
+                                <span>⏱️ ~{{ task.estimated_hours }}h</span>
+                                <span>🔥 Urgency: {{ task.urgency|default:5 }}/10</span>
+                            </div>
+                            <div class="text-gray-700 leading-relaxed">
+                                <strong class="text-gray-900">Why this priority:</strong> {{ task.reason }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- No Plan Fallback -->
+        {% if not tasks and not schedule %}
+        <div class="classic-card rounded-xl p-12 text-center">
+            <div class="text-6xl mb-4">📚</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">No Study Plan Yet</h2>
+            <p class="text-gray-600 mb-6">Upload your course materials to get started</p>
+            <a href="{% url 'upload_page_optimized' %}" 
+               class="inline-block px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-semibold">
+                Upload Documents
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -3,47 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Assistant - Upload & Plan</title>
+    <title>Student Assistant - AI Study Planner</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .classic-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .classic-input {
+            border: 2px solid #d0d0d0;
+            transition: all 0.3s ease;
+        }
+        .classic-input:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+        .classic-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .classic-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .time-unit-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+        .radio-card {
+            transition: all 0.2s ease;
+        }
+        .radio-card:hover {
+            border-color: #8b5cf6 !important;
+            background-color: #faf5ff;
+        }
+        .radio-card input:checked ~ div {
+            background-color: #f3e8ff;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-        <!-- Header with Logout -->
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Upload PDFs for Study Plan</h1>
-            <a href="{% url 'logout_view' %}" class="text-sm text-blue-500 hover:underline">Logout</a>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="classic-card rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        📚 AI Study Planner
+                    </h1>
+                    <p class="text-gray-600">Intelligent prioritization with flexible scheduling</p>
+                </div>
+                <a href="{% url 'logout_view' %}" 
+                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
+                    Logout
+                </a>
+            </div>
         </div>
         
+        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
-                <div class="mb-4 p-4 {% if message.tags == 'error' %}bg-red-100 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-100 border-l-4 border-green-500 text-green-700{% else %}bg-blue-100 border-l-4 border-blue-500 text-blue-700{% endif %} rounded">
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-50 border-l-4 border-green-500 text-green-700{% elif message.tags == 'warning' %}bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700{% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-700{% endif %}">
                     {{ message }}
                 </div>
             {% endfor %}
         {% endif %}
         
+        <!-- Main Form -->
         <form method="post" enctype="multipart/form-data" id="uploadForm">
             {% csrf_token %}
             
-            <!-- File Upload -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Select PDF Files (Max 10)</label>
-                <div class="flex items-center space-x-2 mb-2">
-                    <input type="file" name="files" multiple accept=".pdf" id="fileInput" class="hidden">
-                    <button type="button" id="addFilesBtn" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Add Files</button>
-                    <span class="text-sm text-gray-500">Click to select multiple PDFs</span>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Step 1: Goal -->
+                    <div class="classic-card rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">1</span>
+                            <h2 class="text-xl font-semibold text-gray-800">Your Goal</h2>
+                        </div>
+                        <input type="text" name="user_goal" 
+                               placeholder="e.g., finish semester with good grades" 
+                               value="finish semester with good grades"
+                               class="w-full p-3 rounded-lg classic-input focus:outline-none">
+                    </div>
+                    
+                    <!-- Step 2: Files -->
+                    <div class="classic-card rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">2</span>
+                            <h2 class="text-xl font-semibold text-gray-800">Upload Materials</h2>
+                        </div>
+                        <div class="mb-3">
+                            <input type="file" name="files" multiple accept=".pdf" id="fileInput" class="hidden">
+                            <button type="button" id="addFilesBtn" 
+                                    class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+                                📁 Select PDF Files
+                            </button>
+                            <span class="ml-3 text-sm text-gray-600">Up to 10 files, 100MB each</span>
+                        </div>
+                        <div id="fileCount" class="text-sm text-gray-600 mb-2">No files selected</div>
+                        <div id="fileList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                    
+                    <!-- Step 3: Flexible Time -->
+                    <div class="classic-card rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">3</span>
+                            <h2 class="text-xl font-semibold text-gray-800">Time Availability</h2>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-4">How much time do you have? (Fill any combination)</p>
+                        
+                        <div class="time-unit-group mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Years</label>
+                                <input type="number" name="years" min="0" max="5" placeholder="0"
+                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Months</label>
+                                <input type="number" name="months" min="0" max="12" placeholder="0"
+                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Weeks</label>
+                                <input type="number" name="weeks" min="0" max="52" placeholder="0"
+                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Days</label>
+                                <input type="number" name="days" min="0" max="365" placeholder="0"
+                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Hours</label>
+                                <input type="number" name="hours" min="0" max="10000" placeholder="20"
+                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 p-3 rounded-lg">
+                            <p class="text-sm text-blue-800">
+                                <strong>Total:</strong> <span id="totalHoursDisplay">Enter time above</span>
+                            </p>
+                            <p class="text-xs text-gray-600 mt-1">💡 Leave empty to get prioritization only (no schedule)</p>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-2 text-sm text-gray-500" id="fileCount">Files selected: 0 / 10</p>
-                <div id="fileList" class="mt-2 space-y-1 max-h-40 overflow-y-auto"></div>
+                
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Step 4: Sorting Method -->
+                    <div class="classic-card rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">4</span>
+                            <h2 class="text-xl font-semibold text-gray-800">Sort By</h2>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="hybrid" checked class="mr-3">
+                                <div>
+                                    <div class="font-medium">🤖 AI Hybrid</div>
+                                    <div class="text-xs text-gray-600">Smart balanced approach</div>
+                                </div>
+                            </label>
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="urgency" class="mr-3">
+                                <div>
+                                    <div class="font-medium">⚡ By Urgency</div>
+                                    <div class="text-xs text-gray-600">Deadline-driven</div>
+                                </div>
+                            </label>
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="foundational" class="mr-3">
+                                <div>
+                                    <div class="font-medium">📖 Prerequisites First</div>
+                                    <div class="text-xs text-gray-600">Build from basics</div>
+                                </div>
+                            </label>
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="pages" class="mr-3">
+                                <div>
+                                    <div class="font-medium">📄 By Pages</div>
+                                    <div class="text-xs text-gray-600">Shorter first</div>
+                                </div>
+                            </label>
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="content" class="mr-3">
+                                <div>
+                                    <div class="font-medium">🎯 By Content</div>
+                                    <div class="text-xs text-gray-600">Topic importance</div>
+                                </div>
+                            </label>
+                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                                <input type="radio" name="sort_method" value="complexity" class="mr-3">
+                                <div>
+                                    <div class="font-medium">🧩 By Difficulty</div>
+                                    <div class="text-xs text-gray-600">Easy to hard</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 5: Constraints -->
+                    <div class="classic-card rounded-xl p-6">
+                        <div class="flex items-center mb-4">
+                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">5</span>
+                            <h2 class="text-xl font-semibold text-gray-800">Preferences</h2>
+                        </div>
+                        <textarea name="constraint_prompt" rows="4" 
+                                  placeholder="e.g., prefer morning study, no weekends, focus on exams"
+                                  class="w-full p-3 rounded-lg classic-input focus:outline-none resize-none"></textarea>
+                        <p class="text-xs text-gray-500 mt-2">
+                            💡 Examples: "intensive study", "relaxed pace", "weekend only"
+                        </p>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-5 border border-purple-100">
+                        <h3 class="font-semibold text-gray-800 mb-2">✨ AI Features</h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>✓ Smart prioritization</li>
+                            <li>✓ Flexible scheduling</li>
+                            <li>✓ Transparent reasoning</li>
+                            <li>✓ Large file support</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             
-            <!-- Constraint Prompt -->
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Optional Constraint Prompt</label>
-                <textarea name="constraint_prompt" rows="3" placeholder="e.g., Focus on exam prep and data analysis topics" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <!-- Submit Button -->
+            <div class="mt-6">
+                <button type="submit" id="submitBtn" disabled
+                        class="w-full classic-btn text-white py-4 px-6 rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    🚀 Generate AI Study Plan
+                </button>
             </div>
-            
-            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" id="submitBtn" disabled>Generate Study Plan</button>
         </form>
     </div>
     
@@ -57,18 +254,48 @@
         const submitBtn = document.getElementById('submitBtn');
         const uploadForm = document.getElementById('uploadForm');
         
-        // Trigger file input on button click
-        addFilesBtn.addEventListener('click', () => {
-            fileInput.click();
+        // Time calculation
+        const timeInputs = document.querySelectorAll('input[type="number"]');
+        const totalDisplay = document.getElementById('totalHoursDisplay');
+        
+        function updateTotalTime() {
+            const years = parseFloat(document.querySelector('input[name="years"]').value) || 0;
+            const months = parseFloat(document.querySelector('input[name="months"]').value) || 0;
+            const weeks = parseFloat(document.querySelector('input[name="weeks"]').value) || 0;
+            const days = parseFloat(document.querySelector('input[name="days"]').value) || 0;
+            const hours = parseFloat(document.querySelector('input[name="hours"]').value) || 0;
+            
+            const totalHours = (years * 365 * 24) + (months * 30 * 24) + 
+                              (weeks * 7 * 24) + (days * 24) + hours;
+            
+            if (totalHours > 0) {
+                let display = [];
+                if (years > 0) display.push(`${years}y`);
+                if (months > 0) display.push(`${months}mo`);
+                if (weeks > 0) display.push(`${weeks}w`);
+                if (days > 0) display.push(`${days}d`);
+                if (hours > 0) display.push(`${hours}h`);
+                
+                totalDisplay.textContent = display.join(' ') + ` (${totalHours.toLocaleString()} hours total)`;
+                totalDisplay.style.color = '#1e40af';
+            } else {
+                totalDisplay.textContent = 'No time specified (prioritization only)';
+                totalDisplay.style.color = '#6b7280';
+            }
+        }
+        
+        timeInputs.forEach(input => {
+            input.addEventListener('input', updateTotalTime);
         });
+        
+        // File handling
+        addFilesBtn.addEventListener('click', () => fileInput.click());
         
         fileInput.addEventListener('change', function(e) {
             const newFiles = Array.from(e.target.files);
-            
-            // Append new files to existing selection
             selectedFiles = [...selectedFiles, ...newFiles];
             
-            // Remove duplicates based on name and size
+            // Remove duplicates
             selectedFiles = selectedFiles.filter((file, index, self) => 
                 index === self.findIndex(f => f.name === file.name && f.size === file.size)
             );
@@ -79,30 +306,56 @@
         
         function updateFileDisplay() {
             const count = selectedFiles.length;
-            fileCount.textContent = `Files selected: ${count} / 10`;
+            
+            if (count === 0) {
+                fileCount.textContent = 'No files selected';
+                fileCount.className = 'text-sm text-gray-600 mb-2';
+                submitBtn.disabled = true;
+            } else if (count > 10) {
+                fileCount.textContent = `⚠️ ${count} files selected (max 10)`;
+                fileCount.className = 'text-sm text-red-600 font-medium mb-2';
+                submitBtn.disabled = true;
+            } else {
+                fileCount.textContent = `✓ ${count} file${count > 1 ? 's' : ''} selected`;
+                fileCount.className = 'text-sm text-green-600 font-medium mb-2';
+                submitBtn.disabled = false;
+            }
             
             fileList.innerHTML = '';
             
-            if (count > 10) {
-                fileCount.textContent = 'Too many files! Max 10. Please remove some.';
-                fileCount.className = 'mt-2 text-sm text-red-500 font-medium';
-                submitBtn.disabled = true;
-                return;
-            } else {
-                fileCount.className = 'mt-2 text-sm text-gray-500';
-            }
-            
             selectedFiles.forEach((file, idx) => {
+                const sizeKB = (file.size / 1024).toFixed(1);
+                const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+                
+                // Check if file is too large
+                const isTooLarge = file.size > 100 * 1024 * 1024;
+                
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center bg-gray-50 p-2 rounded text-sm';
+                div.className = `flex justify-between items-center bg-white p-3 rounded-lg border ${isTooLarge ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
                 div.innerHTML = `
-                    <span class="flex-1 truncate">${file.name} <span class="text-gray-500">(${(file.size / 1024).toFixed(1)} KB)</span></span>
-                    <button type="button" onclick="removeFile(${idx})" class="ml-2 text-red-500 hover:text-red-700 font-medium">Remove</button>
+                    <div class="flex items-center flex-1 min-w-0">
+                        <span class="text-2xl mr-2">📄</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-sm truncate">${file.name}</div>
+                            <div class="text-xs ${isTooLarge ? 'text-red-600 font-medium' : 'text-gray-500'}">
+                                ${sizeDisplay} ${isTooLarge ? '(Too large! Max 100MB)' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removeFile(${idx})" 
+                            class="ml-3 text-red-500 hover:text-red-700 text-sm font-medium">
+                        Remove
+                    </button>
                 `;
                 fileList.appendChild(div);
             });
             
-            submitBtn.disabled = count === 0;
+            // Disable submit if any file is too large
+            const hasTooLarge = selectedFiles.some(f => f.size > 100 * 1024 * 1024);
+            if (hasTooLarge || count > 10) {
+                submitBtn.disabled = true;
+            }
         }
         
         window.removeFile = function(idx) {
@@ -119,7 +372,7 @@
             fileInput.files = dt.files;
         }
         
-        // Form submission - show loading state
+        // Form submission
         uploadForm.addEventListener('submit', function(e) {
             if (selectedFiles.length === 0) {
                 e.preventDefault();
@@ -127,17 +380,29 @@
                 return;
             }
             
-            // Show loading state
+            if (selectedFiles.length > 10) {
+                e.preventDefault();
+                alert('Maximum 10 files allowed. Please remove some files.');
+                return;
+            }
+            
+            // Check file sizes
+            const oversized = selectedFiles.filter(f => f.size > 100 * 1024 * 1024);
+            if (oversized.length > 0) {
+                e.preventDefault();
+                alert(`File(s) too large: ${oversized.map(f => f.name).join(', ')}. Maximum 100MB per file.`);
+                return;
+            }
+            
+            // Disable and show loading
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing...';
             addFilesBtn.disabled = true;
-            
-            // Let form submit normally
-            console.log('Form submitting with', selectedFiles.length, 'files');
         });
         
         // Initial state
         updateFileDisplay();
+        updateTotalTime();
     </script>
 </body>
 </html>

@@ -6,7 +6,6 @@ psycopg2-binary
 celery
 redis
 PyMuPDF
-pytesseract
 pdf2image
 openai
 pinecone
@@ -18,3 +17,5 @@ langchain-pinecone
 PyPDF2
 easyocr
 Pillow
+pydantic==2.9.2  
+pydantic-settings==2.5.2

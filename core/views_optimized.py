@@ -19,7 +19,7 @@ import time
 User = get_user_model()
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-MAX_WAIT_TIME = 300  # 5 minutes for PDF processing
+MAX_WAIT_TIME = 300  # 3 minutes for PDF processing
 
 # ==================== OPTIMIZED UPLOAD ====================
 @login_required
@@ -33,39 +33,30 @@ def upload_page_optimized(request):
         sort_method = request.POST.get('sort_method', 'hybrid')
         constraint_prompt = request.POST.get('constraint_prompt', '').strip()
         
-        # Flexible time input - handle empty strings
-        def safe_int(value, default=0):
-            """Safely convert to int, handling empty strings"""
-            if value is None or value == '':
-                return default
-            try:
-                return int(value)
-            except (ValueError, TypeError):
-                return default
-        
+        # Flexible time input
         time_input = {
-            'years': safe_int(request.POST.get('years')),
-            'months': safe_int(request.POST.get('months')),
-            'weeks': safe_int(request.POST.get('weeks')),
-            'days': safe_int(request.POST.get('days')),
-            'hours': safe_int(request.POST.get('hours'))
+            'years': int(request.POST.get('years') or 0),
+            'months': int(request.POST.get('months') or 0),
+            'weeks': int(request.POST.get('weeks') or 0),
+            'days': int(request.POST.get('days') or 0),
+            'hours': int(request.POST.get('hours') or 0),
         }
         
         # Validate
         if not files:
             messages.error(request, 'Please select at least one PDF file.')
-            return render(request, 'core/upload_advanced.html', {})
+            return render(request, 'core/upload.html', {})
         
         if len(files) > 10:
             messages.error(request, 'Maximum 10 files allowed.')
-            return render(request, 'core/upload_advanced.html', {})
+            return render(request, 'core/upload.html', {})
         
         # Validate file sizes
         oversized_files = []
         for file in files:
             if not file.name.lower().endswith('.pdf'):
                 messages.error(request, f'Only PDF files allowed: {file.name}')
-                return render(request, 'core/upload_advanced.html', {})
+                return render(request, 'core/upload.html', {})
             
             if file.size > MAX_FILE_SIZE:
                 oversized_files.append((file.name, file.size / (1024 * 1024)))
@@ -73,7 +64,7 @@ def upload_page_optimized(request):
         if oversized_files:
             for name, size_mb in oversized_files:
                 messages.error(request, f'File too large: {name} ({size_mb:.1f}MB). Max 100MB.')
-            return render(request, 'core/upload_advanced.html', {})
+            return render(request, 'core/upload.html', {})
         
         # Process uploads
         upload_ids = []
@@ -182,7 +173,7 @@ def upload_page_optimized(request):
         status='processed'
     ).order_by('-created_at')[:10]
     
-    return render(request, 'core/upload_advanced.html', {
+    return render(request, 'core/upload.html', {
         'recent_uploads': user_uploads
     })
 
@@ -295,7 +286,7 @@ def result_page_optimized(request):
         schedule = None
         stats = None
     
-    return render(request, 'core/result_optimized.html', {
+    return render(request, 'core/result_agentic.html', {
         'tasks': tasks,
         'schedule': schedule,
         'stats': stats
