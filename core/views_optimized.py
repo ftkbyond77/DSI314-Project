@@ -1,4 +1,4 @@
-# core/views_optimized.py - Optimized Views for Large Files
+# core/views_optimized.py - Optimized Views with History Tracking
 
 from django.contrib.auth import authenticate, login, logout
 from .forms import LoginForm, RegistrationForm
@@ -6,25 +6,36 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from .models import Upload, Plan, Chunk
+from .models import Upload, Plan, Chunk, StudyPlanHistory
 from .tasks import process_upload
 from .tasks_agentic_optimized import generate_optimized_plan_async
 from .agent_tools_advanced import ToolLogger
 from celery.result import AsyncResult
+from typing import List, Dict
 import json
 import time
 
 User = get_user_model()
 
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-MAX_WAIT_TIME = 300  # 3 minutes for PDF processing
+MAX_WAIT_TIME = 300  # 5 minutes for PDF processing
+
+# ==================== HELPER FUNCTION ====================
+def safe_int(value, default=0):
+    """Safely convert to int, handling empty strings"""
+    if value is None or value == '':
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
 
 # ==================== OPTIMIZED UPLOAD ====================
 @login_required
 def upload_page_optimized(request):
-    """Optimized upload with chunked processing"""
+    """Optimized upload with chunked processing and history tracking"""
     if request.method == 'POST':
         files = request.FILES.getlist('files')
         
@@ -33,13 +44,13 @@ def upload_page_optimized(request):
         sort_method = request.POST.get('sort_method', 'hybrid')
         constraint_prompt = request.POST.get('constraint_prompt', '').strip()
         
-        # Flexible time input
+        # Flexible time input - handle empty strings
         time_input = {
-            'years': int(request.POST.get('years') or 0),
-            'months': int(request.POST.get('months') or 0),
-            'weeks': int(request.POST.get('weeks') or 0),
-            'days': int(request.POST.get('days') or 0),
-            'hours': int(request.POST.get('hours') or 0),
+            'years': safe_int(request.POST.get('years')),
+            'months': safe_int(request.POST.get('months')),
+            'weeks': safe_int(request.POST.get('weeks')),
+            'days': safe_int(request.POST.get('days')),
+            'hours': safe_int(request.POST.get('hours'))
         }
         
         # Validate
@@ -167,14 +178,21 @@ def upload_page_optimized(request):
         
         return redirect('planning_progress')
     
-    # GET - show upload form
+    # GET - show upload form with history
     user_uploads = Upload.objects.filter(
         user=request.user,
         status='processed'
     ).order_by('-created_at')[:10]
     
+    # Get user's study plan history
+    history_plans = StudyPlanHistory.objects.filter(
+        user=request.user,
+        status='active'
+    ).order_by('-created_at')[:10]
+    
     return render(request, 'core/upload.html', {
-        'recent_uploads': user_uploads
+        'recent_uploads': user_uploads,
+        'history_plans': history_plans
     })
 
 
@@ -221,6 +239,7 @@ def planning_status_api(request, task_id):
             if data.get("success"):
                 response["success"] = True
                 response["plan_id"] = data.get("plan_id")
+                response["history_id"] = data.get("history_id")
                 response["execution_time"] = data.get("execution_time")
                 response["tool_summary"] = data.get("tool_summary")
             else:
@@ -247,6 +266,12 @@ def result_page_optimized(request):
     if latest_plan:
         plan = latest_plan.plan_json
         
+        # Get associated uploads for OCR info
+        uploads = Upload.objects.filter(
+            user=request.user,
+            status='processed'
+        ).order_by('-created_at')[:10]
+        
         # Separate schedule from tasks
         schedule = None
         tasks = []
@@ -265,6 +290,11 @@ def result_page_optimized(request):
         total_pages = sum(p.get('pages', 0) for p in tasks)
         total_hours = sum(p.get('estimated_hours', 0) for p in tasks)
         
+        # OCR statistics
+        ocr_pages_total = sum(
+            u.ocr_pages for u in uploads if hasattr(u, 'ocr_pages')
+        )
+        
         # Category breakdown
         category_counts = {}
         for task in tasks:
@@ -279,7 +309,8 @@ def result_page_optimized(request):
             'generated_at': latest_plan.created_at,
             'categories': category_counts,
             'sort_method': metadata.get('sort_method', 'hybrid'),
-            'utilization': metadata.get('utilization_percent', 0)
+            'utilization': metadata.get('utilization_percent', 0),
+            'ocr_pages_processed': ocr_pages_total
         }
     else:
         tasks = []
@@ -287,6 +318,54 @@ def result_page_optimized(request):
         stats = None
     
     return render(request, 'core/result_agentic.html', {
+        'tasks': tasks,
+        'schedule': schedule,
+        'stats': stats
+    })
+
+
+# ==================== HISTORY DETAIL VIEW ====================
+@login_required
+def history_detail(request, history_id):
+    """View a specific plan from history"""
+    history = StudyPlanHistory.objects.filter(
+        id=history_id,
+        user=request.user
+    ).prefetch_related('uploads').first()
+    
+    if not history:
+        messages.error(request, 'History not found')
+        return redirect('upload_page_optimized')
+    
+    # Extract data
+    plan_data = history.plan_json
+    schedule = history.get_schedule()
+    tasks = history.get_tasks()
+    
+    # Build stats
+    stats = {
+        'total_files': history.total_files,
+        'total_pages': history.total_pages,
+        'total_chunks': history.total_chunks,
+        'total_hours': round(history.total_hours, 1) if history.total_hours > 0 else 0,
+        'generated_at': history.created_at,
+        'sort_method': history.sort_method,
+        'execution_time': history.execution_time,
+        'tool_calls': history.tool_calls,
+        'ocr_pages_processed': history.ocr_pages_total,
+        'user_goal': history.user_goal,
+        'constraints': history.constraints,
+    }
+    
+    # Calculate utilization
+    if schedule:
+        total_scheduled = sum(s.get('hours', 0) for s in schedule)
+        stats['utilization'] = (total_scheduled / history.total_hours * 100) if history.total_hours > 0 else 0
+    else:
+        stats['utilization'] = 0
+    
+    return render(request, 'core/history_detail.html', {
+        'history': history,
         'tasks': tasks,
         'schedule': schedule,
         'stats': stats

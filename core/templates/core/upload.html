@@ -3,65 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Assistant - AI Study Planner</title>
+    <title>StudyFlow AI - Intelligent Study Planning Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .classic-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        :root {
+            --primary-dark: #0e244d;
+            --primary-medium: #0b356c;
+            --primary-light: #1e4788;
+            --accent: #3b82f6;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
         }
-        .classic-input {
-            border: 2px solid #d0d0d0;
-            transition: all 0.3s ease;
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
         }
-        .classic-input:focus {
-            border-color: #4a90e2;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        
+        .gradient-primary {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
         }
-        .classic-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        
+        .gradient-hero {
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary-medium) 50%, var(--primary-light) 100%);
         }
-        .classic-btn:hover {
+        
+        .card-modern {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .input-modern {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 15px;
+        }
+        
+        .input-modern:focus {
+            border-color: var(--primary-medium);
+            box-shadow: 0 0 0 4px rgba(11, 53, 108, 0.1);
+            outline: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-light) 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: none;
+            letter-spacing: -0.025em;
+        }
+        
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(14, 36, 77, 0.25), 0 10px 10px -5px rgba(14, 36, 77, 0.04);
         }
-        .time-unit-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
+        
+        .btn-secondary {
+            background: var(--white);
+            color: var(--primary-dark);
+            border: 2px solid var(--gray-200);
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .radio-card {
-            transition: all 0.2s ease;
+        
+        .btn-secondary:hover {
+            border-color: var(--primary-medium);
+            background: var(--gray-50);
         }
-        .radio-card:hover {
-            border-color: #8b5cf6 !important;
-            background-color: #faf5ff;
+        
+        .radio-modern {
+            border: 2px solid var(--gray-200);
+            background: var(--white);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .radio-card input:checked ~ div {
-            background-color: #f3e8ff;
+        
+        .radio-modern:hover {
+            border-color: var(--primary-medium);
+            background: var(--gray-50);
+        }
+        
+        .radio-modern input:checked ~ .radio-content {
+            background: linear-gradient(135deg, rgba(11, 53, 108, 0.05) 0%, rgba(11, 53, 108, 0.1) 100%);
+            border-color: var(--primary-medium);
+        }
+        
+        .tab-modern {
+            position: relative;
+            color: var(--gray-600);
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .tab-modern.active {
+            color: var(--primary-dark);
+            background: var(--white);
+        }
+        
+        .tab-modern.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-medium);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        
+        .history-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .history-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: var(--primary-medium);
+        }
+        
+        .file-item {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .file-item.error {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+        
+        .stat-badge {
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 8px 12px;
+        }
+        
+        .feature-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--gray-800);
+        }
+        
+        .feature-badge::before {
+            content: '✓';
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-6">
-    <div class="max-w-5xl mx-auto">
-        <!-- Header -->
-        <div class="classic-card rounded-xl p-6 mb-6">
+<body class="min-h-screen">
+    <!-- Professional Header -->
+    <div class="gradient-hero text-white">
+        <div class="max-w-7xl mx-auto px-6 py-8">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
-                        📚 AI Study Planner
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        <span class="text-4xl">🎯</span>
+                        StudyFlow AI
                     </h1>
-                    <p class="text-gray-600">Intelligent prioritization with flexible scheduling</p>
+                    <p class="text-blue-100 mt-1">Intelligent Study Planning Platform</p>
                 </div>
-                <a href="{% url 'logout_view' %}" 
-                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
-                    Logout
-                </a>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-blue-100">Welcome, {{ user.username }}</span>
+                    <a href="{% url 'logout_view' %}" 
+                       class="btn-secondary px-4 py-2 text-sm">
+                        Sign Out
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="flex gap-1 mt-8 border-b border-blue-800/30">
+                <button onclick="showTab('new')" id="tab-new" 
+                        class="tab-modern active px-6 py-3 rounded-t-lg">
+                    Create Plan
+                </button>
+                <button onclick="showTab('history')" id="tab-history" 
+                        class="tab-modern px-6 py-3 rounded-t-lg">
+                    My History
+                </button>
             </div>
         </div>
-        
+    </div>
+    
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 -mt-8 pb-12 relative z-10">
         <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
@@ -71,193 +249,273 @@
             {% endfor %}
         {% endif %}
         
-        <!-- Main Form -->
-        <form method="post" enctype="multipart/form-data" id="uploadForm">
-            {% csrf_token %}
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Left Column -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Step 1: Goal -->
-                    <div class="classic-card rounded-xl p-6">
-                        <div class="flex items-center mb-4">
-                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">1</span>
-                            <h2 class="text-xl font-semibold text-gray-800">Your Goal</h2>
-                        </div>
-                        <input type="text" name="user_goal" 
-                               placeholder="e.g., finish semester with good grades" 
-                               value="finish semester with good grades"
-                               class="w-full p-3 rounded-lg classic-input focus:outline-none">
-                    </div>
-                    
-                    <!-- Step 2: Files -->
-                    <div class="classic-card rounded-xl p-6">
-                        <div class="flex items-center mb-4">
-                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">2</span>
-                            <h2 class="text-xl font-semibold text-gray-800">Upload Materials</h2>
-                        </div>
-                        <div class="mb-3">
-                            <input type="file" name="files" multiple accept=".pdf" id="fileInput" class="hidden">
-                            <button type="button" id="addFilesBtn" 
-                                    class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
-                                📁 Select PDF Files
-                            </button>
-                            <span class="ml-3 text-sm text-gray-600">Up to 10 files, 100MB each</span>
-                        </div>
-                        <div id="fileCount" class="text-sm text-gray-600 mb-2">No files selected</div>
-                        <div id="fileList" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                    </div>
-                    
-                    <!-- Step 3: Flexible Time -->
-                    <div class="classic-card rounded-xl p-6">
-                        <div class="flex items-center mb-4">
-                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">3</span>
-                            <h2 class="text-xl font-semibold text-gray-800">Time Availability</h2>
-                        </div>
-                        <p class="text-sm text-gray-600 mb-4">How much time do you have? (Fill any combination)</p>
-                        
-                        <div class="time-unit-group mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Years</label>
-                                <input type="number" name="years" min="0" max="5" placeholder="0"
-                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
+        <!-- Tab: Create New Plan -->
+        <div id="content-new" class="tab-content">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Main Column -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Goal Setting -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">1</span>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-gray-800">Define Your Objective</h2>
+                                    <p class="text-sm text-gray-600">What do you want to achieve?</p>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Months</label>
-                                <input type="number" name="months" min="0" max="12" placeholder="0"
-                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Weeks</label>
-                                <input type="number" name="weeks" min="0" max="52" placeholder="0"
-                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Days</label>
-                                <input type="number" name="days" min="0" max="365" placeholder="0"
-                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Hours</label>
-                                <input type="number" name="hours" min="0" max="10000" placeholder="20"
-                                       class="w-full p-2 rounded-lg classic-input focus:outline-none">
-                            </div>
+                            <input type="text" name="user_goal" 
+                                   placeholder="e.g., Master machine learning fundamentals, Pass final exams with distinction" 
+                                   value="finish semester with good grades"
+                                   class="w-full p-4 input-modern">
                         </div>
                         
-                        <div class="bg-blue-50 p-3 rounded-lg">
-                            <p class="text-sm text-blue-800">
-                                <strong>Total:</strong> <span id="totalHoursDisplay">Enter time above</span>
-                            </p>
-                            <p class="text-xs text-gray-600 mt-1">💡 Leave empty to get prioritization only (no schedule)</p>
+                        <!-- Document Upload -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">2</span>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-gray-800">Upload Study Materials</h2>
+                                    <p class="text-sm text-gray-600">PDF documents for analysis</p>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <input type="file" name="files" multiple accept=".pdf" id="fileInput" class="hidden">
+                                <button type="button" id="addFilesBtn" 
+                                        class="btn-primary px-6 py-3">
+                                    <span class="flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        Select PDF Files
+                                    </span>
+                                </button>
+                                <span class="ml-3 text-sm text-gray-600">Maximum 10 files, 100MB each</span>
+                            </div>
+                            <div id="fileCount" class="text-sm font-medium text-gray-700 mb-3">No files selected</div>
+                            <div id="fileList" class="space-y-3 max-h-64 overflow-y-auto"></div>
+                        </div>
+                        
+                        <!-- Time Configuration -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">3</span>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-gray-800">Available Study Time</h2>
+                                    <p class="text-sm text-gray-600">Flexible time allocation</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-5 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Years</label>
+                                    <input type="number" name="years" min="0" max="5" placeholder="0"
+                                           class="w-full p-3 input-modern text-center">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Months</label>
+                                    <input type="number" name="months" min="0" max="12" placeholder="0"
+                                           class="w-full p-3 input-modern text-center">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Weeks</label>
+                                    <input type="number" name="weeks" min="0" max="52" placeholder="0"
+                                           class="w-full p-3 input-modern text-center">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Days</label>
+                                    <input type="number" name="days" min="0" max="365" placeholder="0"
+                                           class="w-full p-3 input-modern text-center">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Hours</label>
+                                    <input type="number" name="hours" min="0" max="10000" placeholder="20"
+                                           class="w-full p-3 input-modern text-center">
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-blue-900">Total Study Time:</span>
+                                    <span id="totalHoursDisplay" class="text-lg font-bold text-blue-900">Not specified</span>
+                                </div>
+                                <p class="text-xs text-blue-700 mt-2">💡 Leave empty for prioritization without scheduling</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Settings Column -->
+                    <div class="space-y-6">
+                        <!-- Prioritization Method -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">4</span>
+                                <h2 class="text-lg font-semibold text-gray-800">Prioritization</h2>
+                            </div>
+                            <div class="space-y-3">
+                                <label class="radio-modern p-3 rounded-lg cursor-pointer block">
+                                    <input type="radio" name="sort_method" value="hybrid" checked class="hidden">
+                                    <div class="radio-content p-3 rounded-lg border-2">
+                                        <div class="font-medium text-gray-800">AI Hybrid</div>
+                                        <div class="text-xs text-gray-600">Balanced optimization</div>
+                                    </div>
+                                </label>
+                                <label class="radio-modern p-3 rounded-lg cursor-pointer block">
+                                    <input type="radio" name="sort_method" value="urgency" class="hidden">
+                                    <div class="radio-content p-3 rounded-lg border-2">
+                                        <div class="font-medium text-gray-800">By Urgency</div>
+                                        <div class="text-xs text-gray-600">Deadline focused</div>
+                                    </div>
+                                </label>
+                                <label class="radio-modern p-3 rounded-lg cursor-pointer block">
+                                    <input type="radio" name="sort_method" value="foundational" class="hidden">
+                                    <div class="radio-content p-3 rounded-lg border-2">
+                                        <div class="font-medium text-gray-800">Prerequisites First</div>
+                                        <div class="text-xs text-gray-600">Build from basics</div>
+                                    </div>
+                                </label>
+                                <label class="radio-modern p-3 rounded-lg cursor-pointer block">
+                                    <input type="radio" name="sort_method" value="complexity" class="hidden">
+                                    <div class="radio-content p-3 rounded-lg border-2">
+                                        <div class="font-medium text-gray-800">By Complexity</div>
+                                        <div class="text-xs text-gray-600">Progressive difficulty</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Constraints -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">5</span>
+                                <h2 class="text-lg font-semibold text-gray-800">Preferences</h2>
+                            </div>
+                            <textarea name="constraint_prompt" rows="4" 
+                                      placeholder="e.g., Morning sessions only, No weekends, Focus on practical exercises"
+                                      class="w-full p-3 input-modern resize-none"></textarea>
+                        </div>
+                        
+                        <!-- Features -->
+                        <div class="card-modern p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+                            <h3 class="font-semibold text-gray-800 mb-3">Platform Features</h3>
+                            <div class="space-y-2">
+                                <div class="feature-badge">AI-Powered Analysis</div>
+                                <div class="feature-badge">Smart Scheduling</div>
+                                <div class="feature-badge">OCR Support</div>
+                                <div class="feature-badge">Progress Tracking</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Right Column -->
-                <div class="space-y-6">
-                    <!-- Step 4: Sorting Method -->
-                    <div class="classic-card rounded-xl p-6">
-                        <div class="flex items-center mb-4">
-                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">4</span>
-                            <h2 class="text-xl font-semibold text-gray-800">Sort By</h2>
+                <!-- Submit Button -->
+                <div class="mt-8">
+                    <button type="submit" id="submitBtn" disabled
+                            class="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        Generate Intelligent Study Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Tab: History -->
+        <div id="content-history" class="tab-content hidden">
+            {% if history_plans %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for plan in history_plans %}
+                <div class="history-card card-modern p-6" onclick="viewHistory({{ plan.id }})">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">
+                                {{ plan.created_at|date:"M d, Y" }}
+                            </h3>
+                            <p class="text-sm text-gray-500">{{ plan.created_at|date:"H:i" }}</p>
                         </div>
-                        <div class="space-y-2">
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="hybrid" checked class="mr-3">
-                                <div>
-                                    <div class="font-medium">🤖 AI Hybrid</div>
-                                    <div class="text-xs text-gray-600">Smart balanced approach</div>
-                                </div>
-                            </label>
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="urgency" class="mr-3">
-                                <div>
-                                    <div class="font-medium">⚡ By Urgency</div>
-                                    <div class="text-xs text-gray-600">Deadline-driven</div>
-                                </div>
-                            </label>
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="foundational" class="mr-3">
-                                <div>
-                                    <div class="font-medium">📖 Prerequisites First</div>
-                                    <div class="text-xs text-gray-600">Build from basics</div>
-                                </div>
-                            </label>
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="pages" class="mr-3">
-                                <div>
-                                    <div class="font-medium">📄 By Pages</div>
-                                    <div class="text-xs text-gray-600">Shorter first</div>
-                                </div>
-                            </label>
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="content" class="mr-3">
-                                <div>
-                                    <div class="font-medium">🎯 By Content</div>
-                                    <div class="text-xs text-gray-600">Topic importance</div>
-                                </div>
-                            </label>
-                            <label class="radio-card flex items-center p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
-                                <input type="radio" name="sort_method" value="complexity" class="mr-3">
-                                <div>
-                                    <div class="font-medium">🧩 By Difficulty</div>
-                                    <div class="text-xs text-gray-600">Easy to hard</div>
-                                </div>
-                            </label>
-                        </div>
+                        <span class="px-3 py-1 gradient-primary text-white rounded-full text-xs font-medium">
+                            {{ plan.sort_method|title }}
+                        </span>
                     </div>
                     
-                    <!-- Step 5: Constraints -->
-                    <div class="classic-card rounded-xl p-6">
-                        <div class="flex items-center mb-4">
-                            <span class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold mr-3">5</span>
-                            <h2 class="text-xl font-semibold text-gray-800">Preferences</h2>
-                        </div>
-                        <textarea name="constraint_prompt" rows="4" 
-                                  placeholder="e.g., prefer morning study, no weekends, focus on exams"
-                                  class="w-full p-3 rounded-lg classic-input focus:outline-none resize-none"></textarea>
-                        <p class="text-xs text-gray-500 mt-2">
-                            💡 Examples: "intensive study", "relaxed pace", "weekend only"
-                        </p>
-                    </div>
+                    {% if plan.user_goal %}
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {{ plan.user_goal }}
+                    </p>
+                    {% endif %}
                     
-                    <!-- Info Box -->
-                    <div class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-5 border border-purple-100">
-                        <h3 class="font-semibold text-gray-800 mb-2">✨ AI Features</h3>
-                        <ul class="text-sm text-gray-700 space-y-1">
-                            <li>✓ Smart prioritization</li>
-                            <li>✓ Flexible scheduling</li>
-                            <li>✓ Transparent reasoning</li>
-                            <li>✓ Large file support</li>
-                        </ul>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="stat-badge text-center">
+                            <div class="text-xl font-bold text-gray-800">{{ plan.total_files }}</div>
+                            <div class="text-xs text-gray-600">Files</div>
+                        </div>
+                        <div class="stat-badge text-center">
+                            <div class="text-xl font-bold text-gray-800">{{ plan.total_pages }}</div>
+                            <div class="text-xs text-gray-600">Pages</div>
+                        </div>
+                        <div class="stat-badge text-center">
+                            <div class="text-xl font-bold text-gray-800">{{ plan.get_tasks|length }}</div>
+                            <div class="text-xs text-gray-600">Tasks</div>
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            
-            <!-- Submit Button -->
-            <div class="mt-6">
-                <button type="submit" id="submitBtn" disabled
-                        class="w-full classic-btn text-white py-4 px-6 rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    🚀 Generate AI Study Plan
+            {% else %}
+            <div class="card-modern p-12 text-center">
+                <div class="text-6xl mb-4 animate-pulse-slow">📚</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">No Study Plans Yet</h3>
+                <p class="text-gray-600 mb-6">Create your first intelligent study plan to get started</p>
+                <button onclick="showTab('new')" 
+                        class="btn-primary px-8 py-3">
+                    Create Your First Plan
                 </button>
             </div>
-        </form>
+            {% endif %}
+        </div>
     </div>
     
     <script>
-        let selectedFiles = [];
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-modern').forEach(el => el.classList.remove('active'));
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
         
+        // Radio button styling
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.radio-content').forEach(content => {
+                    content.style.background = '';
+                    content.style.borderColor = '';
+                });
+                if (this.checked) {
+                    const content = this.nextElementSibling;
+                    content.style.background = 'linear-gradient(135deg, rgba(11, 53, 108, 0.05) 0%, rgba(11, 53, 108, 0.1) 100%)';
+                    content.style.borderColor = '#0b356c';
+                }
+            });
+        });
+        
+        // Initialize first radio
+        document.querySelector('input[type="radio"]:checked').dispatchEvent(new Event('change'));
+        
+        // View history
+        function viewHistory(planId) {
+            window.location.href = `/history/${planId}/`;
+        }
+        
+        // File handling
+        let selectedFiles = [];
         const fileInput = document.getElementById('fileInput');
         const addFilesBtn = document.getElementById('addFilesBtn');
         const fileCount = document.getElementById('fileCount');
         const fileList = document.getElementById('fileList');
         const submitBtn = document.getElementById('submitBtn');
-        const uploadForm = document.getElementById('uploadForm');
         
         // Time calculation
-        const timeInputs = document.querySelectorAll('input[type="number"]');
-        const totalDisplay = document.getElementById('totalHoursDisplay');
-        
         function updateTotalTime() {
             const years = parseFloat(document.querySelector('input[name="years"]').value) || 0;
             const months = parseFloat(document.querySelector('input[name="months"]').value) || 0;
@@ -265,41 +523,36 @@
             const days = parseFloat(document.querySelector('input[name="days"]').value) || 0;
             const hours = parseFloat(document.querySelector('input[name="hours"]').value) || 0;
             
-            const totalHours = (years * 365 * 24) + (months * 30 * 24) + 
-                              (weeks * 7 * 24) + (days * 24) + hours;
+            const totalHours = (years * 365 * 24) + (months * 30 * 24) + (weeks * 7 * 24) + (days * 24) + hours;
+            const display = document.getElementById('totalHoursDisplay');
             
             if (totalHours > 0) {
-                let display = [];
-                if (years > 0) display.push(`${years}y`);
-                if (months > 0) display.push(`${months}mo`);
-                if (weeks > 0) display.push(`${weeks}w`);
-                if (days > 0) display.push(`${days}d`);
-                if (hours > 0) display.push(`${hours}h`);
-                
-                totalDisplay.textContent = display.join(' ') + ` (${totalHours.toLocaleString()} hours total)`;
-                totalDisplay.style.color = '#1e40af';
+                let parts = [];
+                if (years > 0) parts.push(`${years}y`);
+                if (months > 0) parts.push(`${months}mo`);
+                if (weeks > 0) parts.push(`${weeks}w`);
+                if (days > 0) parts.push(`${days}d`);
+                if (hours > 0) parts.push(`${hours}h`);
+                display.textContent = `${parts.join(' ')} (${totalHours.toLocaleString()} total hours)`;
+                display.className = 'text-lg font-bold text-blue-900';
             } else {
-                totalDisplay.textContent = 'No time specified (prioritization only)';
-                totalDisplay.style.color = '#6b7280';
+                display.textContent = 'Not specified';
+                display.className = 'text-lg font-bold text-gray-500';
             }
         }
         
-        timeInputs.forEach(input => {
+        document.querySelectorAll('input[type="number"]').forEach(input => {
             input.addEventListener('input', updateTotalTime);
         });
         
-        // File handling
         addFilesBtn.addEventListener('click', () => fileInput.click());
         
         fileInput.addEventListener('change', function(e) {
             const newFiles = Array.from(e.target.files);
             selectedFiles = [...selectedFiles, ...newFiles];
-            
-            // Remove duplicates
             selectedFiles = selectedFiles.filter((file, index, self) => 
                 index === self.findIndex(f => f.name === file.name && f.size === file.size)
             );
-            
             updateFileDisplay();
             updateInputFiles();
         });
@@ -309,53 +562,48 @@
             
             if (count === 0) {
                 fileCount.textContent = 'No files selected';
-                fileCount.className = 'text-sm text-gray-600 mb-2';
+                fileCount.className = 'text-sm font-medium text-gray-700 mb-3';
                 submitBtn.disabled = true;
             } else if (count > 10) {
-                fileCount.textContent = `⚠️ ${count} files selected (max 10)`;
-                fileCount.className = 'text-sm text-red-600 font-medium mb-2';
+                fileCount.textContent = `⚠️ ${count} files selected (maximum 10 allowed)`;
+                fileCount.className = 'text-sm font-medium text-red-600 mb-3';
                 submitBtn.disabled = true;
             } else {
-                fileCount.textContent = `✓ ${count} file${count > 1 ? 's' : ''} selected`;
-                fileCount.className = 'text-sm text-green-600 font-medium mb-2';
+                fileCount.textContent = `${count} file${count > 1 ? 's' : ''} selected`;
+                fileCount.className = 'text-sm font-medium text-green-600 mb-3';
                 submitBtn.disabled = false;
             }
             
             fileList.innerHTML = '';
             
             selectedFiles.forEach((file, idx) => {
-                const sizeKB = (file.size / 1024).toFixed(1);
                 const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-                
-                // Check if file is too large
                 const isTooLarge = file.size > 100 * 1024 * 1024;
                 
                 const div = document.createElement('div');
-                div.className = `flex justify-between items-center bg-white p-3 rounded-lg border ${isTooLarge ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
+                div.className = `file-item ${isTooLarge ? 'error' : ''} p-4 flex justify-between items-center`;
                 div.innerHTML = `
                     <div class="flex items-center flex-1 min-w-0">
-                        <span class="text-2xl mr-2">📄</span>
+                        <svg class="w-8 h-8 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
                         <div class="flex-1 min-w-0">
-                            <div class="font-medium text-sm truncate">${file.name}</div>
+                            <div class="font-medium text-sm text-gray-800 truncate">${file.name}</div>
                             <div class="text-xs ${isTooLarge ? 'text-red-600 font-medium' : 'text-gray-500'}">
-                                ${sizeDisplay} ${isTooLarge ? '(Too large! Max 100MB)' : ''}
+                                ${sizeMB} MB ${isTooLarge ? '(Exceeds 100MB limit)' : ''}
                             </div>
                         </div>
                     </div>
                     <button type="button" onclick="removeFile(${idx})" 
-                            class="ml-3 text-red-500 hover:text-red-700 text-sm font-medium">
+                            class="ml-3 text-red-500 hover:text-red-700 font-medium text-sm">
                         Remove
                     </button>
                 `;
                 fileList.appendChild(div);
             });
             
-            // Disable submit if any file is too large
             const hasTooLarge = selectedFiles.some(f => f.size > 100 * 1024 * 1024);
-            if (hasTooLarge || count > 10) {
-                submitBtn.disabled = true;
-            }
+            if (hasTooLarge || count > 10) submitBtn.disabled = true;
         }
         
         window.removeFile = function(idx) {
@@ -366,41 +614,23 @@
         
         function updateInputFiles() {
             const dt = new DataTransfer();
-            selectedFiles.slice(0, 10).forEach(file => {
-                dt.items.add(file);
-            });
+            selectedFiles.slice(0, 10).forEach(file => dt.items.add(file));
             fileInput.files = dt.files;
         }
         
         // Form submission
-        uploadForm.addEventListener('submit', function(e) {
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
             if (selectedFiles.length === 0) {
                 e.preventDefault();
                 alert('Please select at least one PDF file.');
                 return;
             }
             
-            if (selectedFiles.length > 10) {
-                e.preventDefault();
-                alert('Maximum 10 files allowed. Please remove some files.');
-                return;
-            }
-            
-            // Check file sizes
-            const oversized = selectedFiles.filter(f => f.size > 100 * 1024 * 1024);
-            if (oversized.length > 0) {
-                e.preventDefault();
-                alert(`File(s) too large: ${oversized.map(f => f.name).join(', ')}. Maximum 100MB per file.`);
-                return;
-            }
-            
-            // Disable and show loading
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing...';
-            addFilesBtn.disabled = true;
         });
         
-        // Initial state
+        // Initial setup
         updateFileDisplay();
         updateTotalTime();
     </script>

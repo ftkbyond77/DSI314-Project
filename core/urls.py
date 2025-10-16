@@ -1,7 +1,4 @@
-# core/urls.py
 from django.urls import path
-# from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from . import views  
 from . import views_optimized
 
 urlpatterns = [
@@ -9,6 +6,9 @@ urlpatterns = [
     path('', views_optimized.upload_page_optimized, name='upload_page_optimized'),
     path('upload/', views_optimized.upload_page_optimized, name='upload_page_optimized'),
     path('result/', views_optimized.result_page_optimized, name='result_page_optimized'),
+    
+    # ==================== HISTORY ====================
+    path('history/<int:history_id>/', views_optimized.history_detail, name='history_detail'),
     
     # ==================== ASYNC PROGRESS ====================
     path('planning-progress/', views_optimized.planning_progress, name='planning_progress'),

@@ -3,92 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Planning in Progress</title>
+    <title>Processing - StudyFlow AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-dark: #0e244d;
+            --primary-medium: #0b356c;
+            --primary-light: #1e4788;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 50%, var(--primary-light) 100%);
+            min-height: 100vh;
+        }
+        
+        .card-modern {
+            background: var(--white);
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .gradient-primary {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+        }
+        
+        .progress-ring {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .progress-bar-fill {
+            background: linear-gradient(90deg, var(--primary-medium) 0%, var(--primary-light) 50%, var(--primary-medium) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -200% center;
+            }
+            100% {
+                background-position: 200% center;
+            }
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            border: 1px solid var(--gray-200);
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .activity-item {
+            padding: 12px 16px;
+            background: var(--gray-50);
+            border-left: 3px solid var(--primary-medium);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary-medium);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-8">
-    <div class="max-w-2xl mx-auto">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800 text-center">🤖 AI Planning in Progress</h1>
-            <p class="text-gray-600 text-center mt-2">Please wait while our AI agents analyze your documents...</p>
+<body class="flex items-center justify-center p-8">
+    <div class="w-full max-w-3xl">
+        <!-- Main Card -->
+        <div class="card-modern p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="inline-block mb-4">
+                    <div class="spinner mx-auto"></div>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">AI Analysis in Progress</h1>
+                <p class="text-gray-600">Our AI agents are analyzing your documents and creating your personalized study plan</p>
+            </div>
+            
+            <!-- Progress Section -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 id="statusText" class="text-lg font-semibold text-gray-800">Initializing...</h2>
+                    <span id="progressPercent" class="text-lg font-bold text-primary-medium">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="progress-bar-fill h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="detailText" class="text-sm text-gray-600 mt-2">Task ID: {{ task_id }}</p>
+            </div>
+            
+            <!-- Processing Details Grid -->
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-gray-800">{{ params.file_count }}</div>
+                            <div class="text-sm text-gray-600">Documents</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-gray-800">{{ params.sort_method|default:"hybrid"|title }}</div>
+                            <div class="text-sm text-gray-600">Method</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Goal Display -->
+            {% if params.user_goal %}
+            <div class="bg-gray-50 rounded-lg p-4 mb-8">
+                <h3 class="font-semibold text-gray-800 mb-2">Your Goal</h3>
+                <p class="text-gray-700">{{ params.user_goal }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Activity Log -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <h3 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
+                    Agent Activity
+                </h3>
+                <div id="activityLog" class="max-h-48 overflow-y-auto space-y-2">
+                    <div class="activity-item">
+                        🚀 Task submitted to processing queue
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Container (hidden) -->
+            <div id="errorContainer" class="hidden mt-6 bg-red-50 border-2 border-red-200 rounded-lg p-6">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-red-600 mt-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"/>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-red-800 mb-2">Processing Error</h3>
+                        <p id="errorMessage" class="text-red-700"></p>
+                        <button onclick="window.location.href='{% url 'upload_page_optimized' %}'" 
+                                class="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
         
-        <!-- Progress Container -->
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <!-- Status Message -->
-            <div id="statusMessage" class="text-center mb-6">
-                <div class="inline-block animate-spin text-6xl mb-4">⏳</div>
-                <h2 class="text-xl font-semibold text-gray-800" id="statusText">Initializing AI agents...</h2>
-                <p class="text-gray-600 mt-2" id="detailText">Task ID: {{ task_id }}</p>
+        <!-- Info Cards -->
+        <div class="grid grid-cols-3 gap-4 mt-6">
+            <div class="card-modern p-4 text-center">
+                <div class="text-2xl mb-2">🤖</div>
+                <h4 class="font-semibold text-gray-800 mb-1">AI Analysis</h4>
+                <p class="text-xs text-gray-600">Deep content analysis</p>
             </div>
-            
-            <!-- Progress Bar -->
-            <div class="mb-6">
-                <div class="flex justify-between text-sm text-gray-600 mb-2">
-                    <span id="progressLabel">Starting...</span>
-                    <span id="progressPercent">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-4">
-                    <div id="progressBar" class="bg-gradient-to-r from-blue-600 to-indigo-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
-                </div>
+            <div class="card-modern p-4 text-center">
+                <div class="text-2xl mb-2">📊</div>
+                <h4 class="font-semibold text-gray-800 mb-1">Prioritization</h4>
+                <p class="text-xs text-gray-600">Smart task ordering</p>
             </div>
-            
-            <!-- Processing Details -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 class="font-semibold text-gray-800 mb-3">📊 Processing Details:</h3>
-                <div class="space-y-2 text-sm text-gray-700">
-                    <div class="flex justify-between">
-                        <span>Files to analyze:</span>
-                        <span class="font-semibold">{{ params.file_count }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Your goal:</span>
-                        <span class="font-semibold">{{ params.user_goal }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Available time:</span>
-                        <span class="font-semibold">{{ params.available_hours }} hours/week</span>
-                    </div>
-                    {% if params.constraints %}
-                    <div class="flex justify-between">
-                        <span>Constraints:</span>
-                        <span class="font-semibold">{{ params.constraints }}</span>
-                    </div>
-                    {% endif %}
-                </div>
+            <div class="card-modern p-4 text-center">
+                <div class="text-2xl mb-2">📅</div>
+                <h4 class="font-semibold text-gray-800 mb-1">Scheduling</h4>
+                <p class="text-xs text-gray-600">Optimal time allocation</p>
             </div>
-            
-            <!-- Agent Activity Log -->
-            <div class="bg-blue-50 rounded-lg p-4">
-                <h3 class="font-semibold text-blue-900 mb-3">🔧 Agent Activity:</h3>
-                <div id="activityLog" class="space-y-2 text-sm text-blue-800 max-h-40 overflow-y-auto">
-                    <div class="flex items-start">
-                        <span class="mr-2">⚙️</span>
-                        <span>Task queued and waiting for processing...</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Error Display (hidden by default) -->
-            <div id="errorContainer" class="hidden mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 class="font-semibold text-red-800 mb-2">❌ Error Occurred:</h3>
-                <p id="errorMessage" class="text-red-700 text-sm"></p>
-                <button onclick="window.location.href='{% url 'upload_page_optimized' %}'" 
-                        class="mt-4 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                    Try Again
-                </button>
-            </div>
-        </div>
-        
-        <!-- Info Box -->
-        <div class="mt-6 bg-white rounded-lg shadow p-4">
-            <h3 class="font-semibold text-gray-800 mb-2">💡 What's Happening:</h3>
-            <ul class="text-sm text-gray-700 space-y-1">
-                <li>✓ <strong>Prioritization Agent:</strong> Analyzing each document's importance</li>
-                <li>✓ <strong>Scheduling Agent:</strong> Creating your optimal study schedule</li>
-                <li>✓ <strong>Reasoning Engine:</strong> Generating explanations for each decision</li>
-            </ul>
         </div>
     </div>
     
@@ -96,13 +238,13 @@
         const taskId = '{{ task_id }}';
         let pollInterval;
         let activityLog = [];
+        let lastStatus = '';
         
         function addActivity(message) {
-            activityLog.push(message);
             const logContainer = document.getElementById('activityLog');
             const div = document.createElement('div');
-            div.className = 'flex items-start';
-            div.innerHTML = `<span class="mr-2">⚙️</span><span>${message}</span>`;
+            div.className = 'activity-item';
+            div.innerHTML = `⚙️ ${message}`;
             logContainer.appendChild(div);
             logContainer.scrollTop = logContainer.scrollHeight;
         }
@@ -111,14 +253,19 @@
             const percent = Math.round((current / total) * 100);
             document.getElementById('progressBar').style.width = percent + '%';
             document.getElementById('progressPercent').textContent = percent + '%';
-            document.getElementById('progressLabel').textContent = status;
             document.getElementById('statusText').textContent = status;
+            
+            // Add activity log for status changes
+            if (status !== lastStatus) {
+                lastStatus = status;
+                addActivity(status);
+            }
         }
         
         function showError(message) {
             document.getElementById('errorContainer').classList.remove('hidden');
             document.getElementById('errorMessage').textContent = message;
-            document.getElementById('statusMessage').classList.add('hidden');
+            document.querySelector('.spinner').style.display = 'none';
             clearInterval(pollInterval);
         }
         
@@ -126,61 +273,72 @@
             fetch(`/api/planning-status/${taskId}/`)
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Status:', data);
+                    console.log('Status update:', data);
                     
                     if (data.status === 'PENDING') {
-                        updateProgress(0, 3, 'Task queued...');
-                        addActivity('Waiting in queue...');
+                        updateProgress(0, 4, 'Queued for processing...');
                     }
                     else if (data.status === 'PROCESSING') {
                         const meta = data.meta || {};
                         const current = meta.current || 1;
-                        const total = meta.total || 3;
+                        const total = meta.total || 4;
                         const status = meta.status || 'Processing...';
                         
-                        updateProgress(current, total, status);
-                        addActivity(status);
+                        // Map progress steps to user-friendly messages
+                        const messages = {
+                            'Analyzing tasks...': '📖 Analyzing document content and complexity',
+                            'Prioritizing tasks...': '🎯 Applying AI prioritization algorithms',
+                            'Creating schedule...': '📅 Generating optimized study schedule',
+                            'Generating reasoning...': '🤖 Creating detailed explanations'
+                        };
+                        
+                        const displayStatus = messages[status] || status;
+                        updateProgress(current, total, displayStatus);
                     }
                     else if (data.ready) {
                         clearInterval(pollInterval);
                         
                         if (data.success) {
-                            updateProgress(3, 3, 'Complete! Redirecting...');
-                            addActivity('✅ Planning completed successfully!');
+                            updateProgress(4, 4, '✅ Complete! Preparing your results...');
                             
-                            // Show summary
+                            // Add completion stats
                             if (data.tool_summary) {
-                                addActivity(`📊 Used ${data.tool_summary.total_calls} tool calls in ${data.execution_time}s`);
+                                addActivity(`📊 Analysis complete: ${data.tool_summary.total_calls || 0} AI operations in ${data.execution_time}s`);
                             }
                             
+                            // Show success animation
+                            document.querySelector('.spinner').style.display = 'none';
+                            
+                            // Redirect after brief delay
                             setTimeout(() => {
                                 window.location.href = '{% url 'result_page_optimized' %}';
-                            }, 2000);
+                            }, 1500);
                         } else {
-                            showError(data.error || 'Unknown error occurred');
+                            showError(data.error || 'An unexpected error occurred during processing.');
                         }
                     }
                     else if (data.status === 'FAILURE') {
-                        showError(data.error || 'Task failed');
+                        showError(data.error || 'Task processing failed. Please try again.');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    showError('Failed to check status: ' + error.message);
+                    console.error('Status check error:', error);
+                    // Don't show error immediately - might be temporary network issue
                 });
         }
         
         // Start polling
         checkStatus();
-        pollInterval = setInterval(checkStatus, 2000); // Check every 2 seconds
+        pollInterval = setInterval(checkStatus, 2000);
         
         // Timeout after 5 minutes
         setTimeout(() => {
-            clearInterval(pollInterval);
             if (!document.getElementById('errorContainer').classList.contains('hidden')) {
                 return; // Already showing error
             }
-            showError('Processing timeout. Your task may still be running in the background.');
+            
+            clearInterval(pollInterval);
+            showError('Processing is taking longer than expected. Your task may still be running in the background. Please check back in a few minutes.');
         }, 300000);
     </script>
 </body>
