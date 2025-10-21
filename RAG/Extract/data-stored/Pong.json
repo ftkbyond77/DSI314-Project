@@ -1,0 +1,597 @@
+[
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/6-100l-introduction-to-cs-and-programming-using-python-fall-2022/mit6_100l_f22_lec01.pdf",
+        "content":"Lecture 1: COMPUTERS are MACHINES that EXECUTE ALGORITHMS. Two things computers do: Performs simple operations 100s of billions per second! Remembers results 100s of gigabytes of storage! Turing showed that you can compute anything with 6 primitives: left, right, print, scan, erase, no op.",
+        "page_num":"~25",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/6-1200j-mathematics-for-computer-science-spring-2024/mit6_1200j_s24_lec10.pdf",
+        "content":"Lecture 10: Cryptography. Art/Science of Protecting Information. Idea: Encrypt or 'garble' a message that you want to send privately, in such a way that only certain parties can read it. It uses all sorts of extraordinary math, like modular arithmetic.",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/6-1200j-mathematics-for-computer-science-spring-2024/mit6_1200j_s24_lec04.pdf",
+        "content":"Lecture 04: State machines. A state machine is defined by a collection of states, a specified initial state, and for each state a list of possible transitions. If a state has multiple possible transitions, we say the state machine is non-deterministic.",
+        "page_num":"~12",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/Calculus_Volume_1_-_WEB_68M1Z5W.pdf",
+        "content":"Textbook: Calculus Volume 1. Covers functions, limits, derivatives, and integration. OpenStax provides free, peer-reviewed, openly licensed textbooks for introductory college and Advanced Placement courses.",
+        "page_num":"~800+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/Introductory_Statistics_2e_-_WEB.pdf",
+        "content":"Textbook: Introductory Statistics 2e. Covers: Histograms, Frequency Polygons, Time Series Graphs, Measures of the Location of the Data, Box Plots, Measures of the Center of the Data, Skewness and the Mean, Median, and Mode, Hypothesis Testing, Chi-Square Distribution.",
+        "page_num":"~700+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"arXiv",
+        "source_link":"https://arxiv.org/pdf/2104.05314",
+        "content":"Paper: Machine learning and deep learning (Abstract). Machine learning describes the capacity of systems to learn from problem-specific training data to automate the process of analytical model building. Deep learning is a machine learning concept based on artificial neural networks.",
+        "page_num":"~18",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"arXiv",
+        "source_link":"https://arxiv.org/pdf/1903.12394",
+        "content":"Paper: Informed Machine Learning u2013 A Taxonomy and Survey (Abstract). We provide a definition and propose a concept for informed machine learning... introduces a taxonomy that serves as a classification framework. It considers the source of knowledge, its representation, and its integration into the machine learning pipeline.",
+        "page_num":"~30",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OAPEN Library (Springer)",
+        "source_link":"https://library.oapen.org/bitstream/id/d9e017e0-d794-4cbb-b71b-78aac5e2b2c4/978-3-031-31557-2.pdf",
+        "content":"Textbook: Systems Biology. The biological world consists of self-managing and self-organizing systems which owe their existence to a steady supply of energy and information. Thermodynamics introduces a distinction between open and closed systems.",
+        "page_num":"~400+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"ResearchGate (Springer)",
+        "source_link":"http://e.guigon.free.fr/rsc/book/ShonkwilerHerod09.pdf",
+        "content":"Textbook: Mathematical Biology: An Introduction with Maple and Matlab (Preface). Mathematical biology is not merely the intrusion of one science into another, but that it has a unity of its own... Exponential and logistic population growths are standard studies.",
+        "page_num":"~450+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"NBER",
+        "source_link":"https://www.nber.org/system/files/working_papers/w17103/w17103.pdf",
+        "content":"Working Paper: Americans' Financial Capability. This paper examines Americans' financial capability, using data from a new survey. Financial capability is measured in terms of how well people make ends meet, plan ahead, choose and manage financial products, and possess the skills and knowledge.",
+        "page_num":"~40",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"ResearchGate",
+        "source_link":"https://www.researchgate.net/profile/Paulo-Vitor-Silva-3/post/Friends-anyone-else-have-behavioral-questionnaire/attachment/5a14c60eb53d2fe6c52e5ba7/AS%3A563292738211841%401511310862264/download/Financial+Planning+and+Counseling+Scales.pdf",
+        "content":"Book Chapter: Financial Planning and Counseling Scales (Introduction). Provides a compilation of valid and reliable measures in personal finance. ... Individual characteristics and decision making, financial knowledge and behaviors, and financial security are all critical issues.",
+        "page_num":"~300+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Sambalpur University",
+        "source_link":"https://www.suniv.ac.in/docs/Economics-Syllabus.pdf",
+        "content":"Syllabus: Undergraduate Course in Economics. Unit I: Exploring the Subject Matter of Economics... The Ten Principles of Economics: How people make decisions; Thinking Like an Economist... The Market Forces; Markets and Competition; The Demand and Supply curves.",
+        "page_num":"~20",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"University of Kalyani",
+        "source_link":"https://klyuniv.ac.in/wp-content/uploads/2023/08/Economics.pdf",
+        "content":"Syllabus: B.A./B.Sc. (Major) in Economics. Problem of scarcity and choice: scarcity, choice and opportunity cost; production possibility frontier. Demand and supply: law of demand, determinants of demand... Consumer Theory: Utility in Cardinal Approach and Ordinal utility.",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CollegeBoard AP",
+        "source_link":"https://apcentral.collegeboard.org/media/pdf/ap-us-history-course-and-exam-description.pdf",
+        "content":"Syllabus/Framework: AP US History Course and Exam Description. UNIT 1: Period 1: 1491u20131607; UNIT 2: Period 2: 1607u20131754; ... UNIT 7: Period 7: 1890u20131945; ... UNIT 9: Period 9: 1980u2013Present.",
+        "page_num":"~300+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Stanford University",
+        "source_link":"https://ed.stanford.edu/sites/default/files/file_uploads/educ268c_2025_0.pdf",
+        "content":"Syllabus: Schooling the Golden State: A History of Education in California. Key Questions: How has education been a site of struggle in the history of California? How did battles over slavery, abolition, and civil rights define school experiences in early California?",
+        "page_num":"~3",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/ans7870/9/9.00SC/MIT9_00SCF11_text.pdf",
+        "content":"Textbook: Introduction to Psychology. Psychology is the scientific study of mind and behavior. The word 'psychology' comes from the Greek words 'psyche,' (life) and 'logos,' (explanation)... 1.1 Psychology as a Science.",
+        "page_num":"~900+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OER (UIN Syahada)",
+        "source_link":"https://oer.uinsyahada.ac.id/files/original/2ef72e6c3f327346f975ca1ae25108fb.pdf",
+        "content":"Textbook: Introduction to Psychology (Stangor). Table of Contents: Chapter 1 -- Introducing Psychology; Chapter 2 -- Psychological Science; Chapter 3 u2013 Brain and Behavior; Chapter 4 u2013 Learning; Chapter 5 u2013 Memory and Cognition.",
+        "page_num":"~400+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://cdn.prod.website-files.com/681c2af8c996380c77f8ab1e/686987b739d03af7ae805889_11005319281.pdf",
+        "content":"Textbook: College Physics. An Invitation to Explore Physics... organized into chapters... from the fundamental nature of science and physics to more advanced topics like particle physics... covers Kinematics, Dynamics, and Thermodynamics.",
+        "page_num":"~1000+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/Biology2e-WEB.pdf",
+        "content":"Textbook: Biology 2e. Covers the evolutionary basis of biology, cell structure, function, genetics, and mechanisms of evolution. ... Increased focus on evolutionary linkages. ... Updated phylogenetic information.",
+        "page_num":"~1000+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Texas A&M University-Commerce",
+        "source_link":"http://inside.tamuc.edu/academics/cvSyllabi/syllabi/202250/51141.pdf",
+        "content":"Syllabus: Integrated Science. ... Scientific principles... include Applied Sciences, Chemistry, Physics... Students will also be introduced to the scientific method, basic statistics, and the fundamental unit of all living things: the cell. Uses OpenStax Biology 2e.",
+        "page_num":"~7",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/IntroductionToBusiness-OP_8D04gAa.pdf",
+        "content":"Textbook: Introduction to Business. ... 2.1 Understanding Business Ethics... 4.1 Sole Proprietorships... 8.1 Managing Human Resources... 11.1 The Marketing Concept... 17.1 Your Career in Business.",
+        "page_num":"~650+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Pittsburg State University",
+        "source_link":"https://www.pittstate.edu/business/_files/documents/qualification-documents/qualifications-syllabi/2022-winter-fall/mgt-101-98-22wf-dellasega.pdf",
+        "content":"Syllabus: Introduction to Business MGT 101. ... A descriptive introduction to the modern business world and an interpretation of the functional areas of business. ... uses Lumen Waymaker Mastery u2013 Introduction to Business, an OER.",
+        "page_num":"~6",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Texas A&M University-Commerce",
+        "source_link":"http://inside.tamuc.edu/academics/cvSyllabi/syllabi/202220/25342.pdf",
+        "content":"Syllabus: United States Government. ... a survey of the underlying ideas, principles, and participatory practices of constitutional government in the United States and Texas. Topics: civil liberties, constitutionalism, federalism... Uses OpenStax American Government 2e.",
+        "page_num":"~8",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/AmericanGovernment2e-WEB.pdf",
+        "content":"Textbook: American Government 2e. Covers foundations of American government, civil liberties, civil rights, political parties, interest groups, and the branches of government.",
+        "page_num":"~700+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/PrinciplesofAccountingVolume1-Financial-WEB.pdf",
+        "content":"Textbook: Principles of Accounting, Volume 1: Financial Accounting. Covers the accounting cycle, merchandising operations, financial statements, internal controls, and receivables.",
+        "page_num":"~1000+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/7-01sc-fundamentals-of-biology-fall-2011/2fc4084167849d6d0ffb11312ffdb5c5_MIT7_01SCF11_4.3prob.pdf",
+        "content":"Practice Problem: 7.01SC Fundamentals of Biology. ... Recombinant DNA, Session 3: Constructing and Screening a Recombinant DNA Library. ... You have isolated many different yeast auxotrophs. You want to make a yeast genomic library...",
+        "page_num":"~2",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/7-01sc-fundamentals-of-biology-fall-2011/25f6bf696b75c6ba3f96ad00dfed842b_MIT7_01SCF11_1.7prob.pdf",
+        "content":"Practice Problems: 7.01SC Fundamentals of Biology. ... Biochemistry, Session 7: Chemiosmotic Principle, Photosynthesis. ... Respiration and Non-cyclic photophosphorylation both produce ATP using chemiosmosis. What molecule donates electrons...",
+        "page_num":"~2",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/8-01l-physics-i-classical-mechanics-fall-2005/466ab42aa6bc55512e85e11d27f33543_practice_2_solut.pdf",
+        "content":"Practice Exam 2 Solutions: Physics 8.01L. ... Problem 1: Same force, smaller mass, so A has a bigger acceleration... Problem 5: y = H + vt - 1/2 gt^2... Problem 8: Fx = Nsin(theta) = ma, Fy = Ncos(theta) - mg = 0.",
+        "page_num":"~4",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MIT OpenCourseWare",
+        "source_link":"https://ocw.mit.edu/courses/8-01l-physics-i-classical-mechanics-fall-2005/63a6219d391c8f1b3fc70a5fa0828d7b_lec1.pdf",
+        "content":"Syllabus/Lecture 1: Physics 8.01L. ... Homework: You are strongly encouraged to work with other students... Mastering Physics: You must complete the computer assignments on your own... A typical 8.01L week: Sunday - Finish text reading... Tuesday - Lecture...",
+        "page_num":"~4",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"arXiv",
+        "source_link":"https://arxiv.org/pdf/2501.11197",
+        "content":"Paper: Quantum-Driven Framework for Resilient and Equitable Transportation Network Restoration. ... combines quantum computing technology with an equity-focused approach... leverage D-Wave's hybrid quantum solver... Quantum computing... rooted in the principles of quantum mechanics, offers transformative solutions for complex optimization problems.",
+        "page_num":"~8",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"arXiv",
+        "source_link":"https://arxiv.org/pdf/1811.07312",
+        "content":"Paper: Algorithmic complexity in computational biology: basics, challenges and limitations. ... computational problems can be classified according to their algorithmic complexity... Many problems in computational biology are computationally infeasible... The study of algorithmic complexity... expressed using the 'Big-O' notation.",
+        "page_num":"~19",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"arXiv",
+        "source_link":"https://arxiv.org/pdf/2403.00347",
+        "content":"Paper: [Set-Valued Control Functions in Econometrics]. ... A set-valued control function V is a random closed set... Motivating examples... involve control variables, conditional on which the treatment decisions can be viewed as random. ... Example 1 (Binary and Censored Treatment Decisions): D = 1{pi(Z, X) >= V}.",
+        "page_num":"~50+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UC Berkeley",
+        "source_link":"https://sociology.berkeley.edu/sites/default/files/documents/F23%20Soc%201%20course%20syllabus.pdf",
+        "content":"Syllabus: SOC 1: Introduction to Sociology. ... Sociology studies how forces beyond our control... shape what we feel, perceive, want... Three interrelated sets of questions: Identity, Inequality, Integration. ... PART I: THE BIRTH OF SOCIOLOGY... C. Wright Mills, The sociological imagination.",
+        "page_num":"~5",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"University of the Punjab",
+        "source_link":"https://pu.edu.pk/document/merit/1738132673AHIS-122-World-History.pdf",
+        "content":"Syllabus: World History. ... provides an introduction to global human history, covering the period from the origins of humanity to the present... Week 6. India: Delhi Sultanate... Week 8. Transition to Modernity: Renaissance and Reformation... Week 14. World War I. World War II.",
+        "page_num":"~4",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/USHISTORY-WEB.pdf",
+        "content":"Textbook: US History. Covers the colonial period, the American Revolution, the origins of the republic, the Civil War, and events through the 20th century.",
+        "page_num":"~800+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/PrinciplesofMicroeconomics2e-WEB.pdf",
+        "content":"Textbook: Principles of Microeconomics 2e. Covers supply and demand, market equilibrium, elasticity, consumer choice, and market structures.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/PrinciplesofMacroeconomics2e-WEB.pdf",
+        "content":"Textbook: Principles of Macroeconomics 2e. Covers economic growth, unemployment, inflation, the aggregate demand-supply model, and monetary/fiscal policy.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Stony Brook University",
+        "source_link":"https://www.stonybrook.edu/commcms/physics/undergrad/_syllabi/2023.F/PHY%20308.pdf",
+        "content":"Syllabus: Quantum Mechanics. Explains the dynamics of atomic, molecular, microscopic, and mesoscopic systems... Concepts include: the probability current, the uncertainty principle, Hilbert spaces and operators, the spin, the quantization of the action. Also covers the quantum harmonic oscillator and the hydrogen atom.",
+        "page_num":"~4",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Purdue Engineering",
+        "source_link":"https://engineering.purdue.edu/wcchew/course/QMAll20161206.pdf",
+        "content":"Lecture Notes: Quantum Mechanics Made Simple. The only background needed... is undergraduate wave physics, and linear algebra. Discusses wave-particle duality, the Schru00f6dinger equation, and quantum wells formed at heterojunctions due to different electron affinities.",
+        "page_num":"~200+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UC San Diego Department of Economics",
+        "source_link":"https://econweb.ucsd.edu/~jsobel/200Cs09/Kartik_Notes.pdf",
+        "content":"Lecture Notes: Game Theory. Formal methodology to study the interaction of rational agents in strategic settings... focuses on noncooperative game theory, distinguishing it from cooperative game theory. Discusses the Minimax Theorem and common knowledge. Example: Matching Pennies.",
+        "page_num":"~120+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Department of Applied Mathematics (Charles University)",
+        "source_link":"https://kam.mff.cuni.cz/~balko/ath2526/main.pdf",
+        "content":"Lecture Notes: Algorithmic game theory (NDMI098). Introductory text on game theory with emphasis on algorithmic perspective... covers unique mixed Nash equilibrium and pure Nash equilibria (e.g., Battle of sexes game).",
+        "page_num":"~140+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CZU (Open Educational Resource)",
+        "source_link":"https://home.czu.cz/storage/575/52485_computational-fluid-dynamics.pdf",
+        "content":"Textbook/Introduction: Computational Fluid Dynamics (CFD). The branch of fluid dynamics providing a cost-effective means of simulating real flows by the numerical solution of the governing Navier-Stokes equations... compares experimental, analytical, and CFD techniques.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Airloads.net (McGraw-Hill)",
+        "source_link":"https://www.airloads.net/Downloads/Textbooks/Computational-Fluid-Dynamics-the-Basics-With-Applications-Anderson-J-D.pdf",
+        "content":"Textbook: Computational Fluid Dynamics: The Basics with Applications (Preface). Focuses on the philosophy of CFD as a research and design tool. Covers applications in automobile, engine, civil, environmental, and naval architecture. Discusses the Governing Equations of Fluid Dynamics.",
+        "page_num":"~600+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CIS UPenn",
+        "source_link":"https://www.cis.upenn.edu/~mkearns/papers/barbados/heckerman.pdf",
+        "content":"Tutorial: A Tutorial on Learning With Bayesian Networks (Abstract). A graphical model that encodes probabilistic relationships among variables... advantages include handling missing data, learning causal relationships, and combining domain knowledge and data. Distinguishes classical probability from Bayesian probability.",
+        "page_num":"~12",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Journal of Artificial Intelligence Research",
+        "source_link":"https://www.jair.org/index.php/jair/article/download/10835/25860/20204",
+        "content":"Paper: Learning Optimal Bayesian Networks: A Shortest Path Perspective (Abstract). Views learning a Bayesian network structure that optimizes a scoring function as a shortest path problem in an implicit state-space search graph. Uses an A* search algorithm and heuristic functions.",
+        "page_num":"~30",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"SciSpace",
+        "source_link":"https://scispace.com/pdf/leading-cases-on-international-law-13wp6ulx4h.pdf",
+        "content":"Casebook: Leading Cases on International Law (Contents). A collection of cases representing judicial discussion of international law, focusing on the reasoning of the court. Covers: The Nature and Sources of International Law, The Relation of International Law to Municipal Law, Persons in International Law, and Jurisdiction.",
+        "page_num":"~600+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Department of Foreign Affairs and Trade (Australia)",
+        "source_link":"https://www.dfat.gov.au/sites/default/files/australias-oewg-non-paper-case-studies-on-the-application-of-international-law-in-cyberspace.pdf",
+        "content":"Non-Paper/Case Studies: Application of international law in cyberspace. Applies international law to hypothetical scenarios of state-generated malicious cyber activity. Provides a 'tool kit' for victim states to identify breaches and take lawful measures (e.g., acts of retorsion).",
+        "page_num":"~6",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"tecnrt.org (OER)",
+        "source_link":"https://www.tecnrt.org/docs/cse/materials/DLD.pdf",
+        "content":"Textbook/Introduction: Digital Logic Design. Foundational to electrical and computer engineering. Covers data representation and number systems, including conversion among radices (e.g., Decimal to Hexadecimal conversion using the remainder method).",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"hlevkin (Book Chapter)",
+        "source_link":"https://www.hlevkin.com/hlevkin/90MathPhysBioBooks/Mechanics/szebehely_adventuresInCelMech.pdf",
+        "content":"Textbook: CELESTIAL MECHANICS (Second Edition, Preface). Focuses on celestial mechanics as applied to astrophysics, including the theory of the two-body problem for extended deformable bodies and the problem of three bodies. Includes a chapter on rocket propulsion and elementary spacecraft dynamics.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"George Fox University (Digital Commons)",
+        "source_link":"https://digitalcommons.georgefox.edu/cgi/viewcontent.cgi?article=2021&context=ree",
+        "content":"Paper: Hans Mol's Sociology of Religion: Reflection on the Relationship between Identity and the Sacred... Deals with the 'secularization debate.' Discusses Mol's central thesis: religion as a 'sacralization of identity,' synthesizing structural functionalism, social constructivism, and symbolic interactionism.",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UCL Discovery",
+        "source_link":"https://discovery.ucl.ac.uk/1364190/1/Crit%20Sociol-2014-Hjelm-855-72.pdf",
+        "content":"Article: Religion, Discourse and Power: A Contribution towards a Critical Sociology of Religion (Abstract). Proposes Critical Discourse Analysis (CDA) as a framework for a critical agenda in the sociology of religion, focusing on how discourse creates hegemonic understandings of religion and the reproduction of inequality.",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"VSB Engineering College (Course Material)",
+        "source_link":"https://www.vsbec.edu.in/wp-content/uploads/2022/03/II-CHEMICAL-IV-SEM-QUESTION-BANK.pdf",
+        "content":"Question Bank: Chemical Engineering Thermodynamics-I. Definitions and concepts covering intensive vs. extensive properties (e.g., Pressure, Volume), quasi-static process, and types of equilibrium (Thermal, Mechanical, Phase, Chemical).",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"ResearchGate",
+        "source_link":"https://www.researchgate.net/profile/Mina-Karimi-Avargani/post/Looking_for_book_entitled_Fundamentals_of_chemical_thermodynamics_E_N_Yeremin_or_any_other_book_on_irreversible_thermodynamics_for_MS_Chemistry/attachment/62b036e1c98bc742eb208587/AS%3A1168969897639936%401655715550579/download/1.pdf",
+        "content":"Textbook: Fundamentals of Chemical Engineering Thermodynamics (Preface). Two-part structure: Part I covers laws of thermodynamics and applications to pure fluids (PVT behavior, enthalpy, entropy), and Part II extends to mixtures, focusing on phase and chemical equilibrium (fugacity, phase diagrams).",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/Population_Health_for_Nurses_-_WEB.pdf",
+        "content":"Textbook: Population Health for Nurses. Covers concepts of population health. OpenStax provides free, peer-reviewed, openly licensed textbooks. Recommended format is web view for accessibility and currency.",
+        "page_num":"~600+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"OpenStax",
+        "source_link":"https://assets.openstax.org/oscms-prodcms/media/documents/Principles-of-Data-Science-WEB.pdf",
+        "content":"Textbook: Principles of Data Science. Emphasizes the use of Python code in applications (libraries, algorithms) and assumes no significant prior coding experience. Provides foundational statistics instruction for students in various fields (business, finance, healthcare, engineering).",
+        "page_num":"~700+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Blackwell Publishing",
+        "source_link":"https://www.blackwellpublishing.co.uk/content/BPL_Images/Content_store/WWW_Content/9780631218036/03Epis.pdf",
+        "content":"Book Chapter: Studying Language Variation: An Informal Epistemology. Discusses the foundations of **variationist sociolinguistics** and the observation that linguistic variants are linguistically insignificant but socially significant. Credits William Labov's 1963 research report as the effective beginning of the field.",
+        "page_num":"~20",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UNIMUS Library",
+        "source_link":"https://perpus.unimus.ac.id/wp-content/uploads/2012/05/Analyzing-Sociolinguistic-Variation.pdf",
+        "content":"Textbook: Analysing Sociolinguistic Variation (Introduction). A step-by-step guide to the formal analysis of sociolinguistic variation, covering fieldwork, data organisation, and presentation. Mentions variation analysis combines techniques from linguistics, anthropology, and statistics.",
+        "page_num":"~200+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Dialnet",
+        "source_link":"https://dialnet.unirioja.es/descarga/articulo/2734630.pdf",
+        "content":"Paper: Teaching **Nonlinear Dynamics and Chaos** for Beginners. Describes an interdisciplinary course for undergraduate students. Focuses on introducing chaotic phenomena in physical systems using minimum background, emphasizing the geometrical point of view and numerical simulations. Covers the logistic map and the Hu00e9non map.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"MECANON (UFRJ)",
+        "source_link":"http://mecanon.coppe.ufrj.br/wp-content/uploads/2017/08/Nonlinear-Dynamics_-Savi_Dynamics-of-Smart-Systems-and-Structures.pdf",
+        "content":"Book Chapter: Nonlinear Dynamics and Chaos. Presents an overview starting with a background revision of dynamical systems (equilibrium points, linearization, stability). Explores chaotic dynamics with the **Horseshoe transformation**, fractal characteristics, and **Lyapunov exponents** as a diagnostic tool for chaos.",
+        "page_num":"~20",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Bank for International Settlements",
+        "source_link":"https://www.bis.org/publ/work1061.pdf",
+        "content":"Working Paper: Cryptocurrencies and **Decentralized Finance** (DeFi). Overview of cryptocurrencies and DeFi, comparing them to traditional financial intermediation. Highlights how blockchain architecture enables decentralized, open-access platforms that reduce reliance on centralized trusted intermediaries. Discusses Proof of Work (PoW) and Proof of Stake (PoS).",
+        "page_num":"~30",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Financial Cryptography",
+        "source_link":"https://fc18.ifca.ai/preproceedings/75.pdf",
+        "content":"Paper: Decentralization in Bitcoin and Ethereum Networks. A measurement study on various **decentralization metrics** of Bitcoin and Ethereum. Investigates the extent of decentralization by measuring network resources of nodes and interconnections, and the networks' resilience to attacks.",
+        "page_num":"~20",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"WUR eDepot",
+        "source_link":"https://edepot.wur.nl/37152",
+        "content":"Paper: Bioprocess-engineering education with web technology. Defines **Bioprocess Engineering** as applying biology, chemistry, physics, and mathematics to convert raw material into a product (e.g., human hormone, ethanol) using enzymes or cells. Focuses on unit operations with specific requirements for unstable biological components and is based on mass, energy, and momentum conservation.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"WordPress (Bioprocess Engineering Principles)",
+        "source_link":"https://enggbiochem.files.wordpress.com/2013/10/bioprocess-engineering-principles-doran3.pdf",
+        "content":"Textbook: Bioprocess Engineering Principles. Aimed at biological scientists, presenting engineering principles **(mass and energy balances, fluid dynamics, transport phenomena, and reaction theory)** applied to bioprocessing (e.g., manufacturing antibiotics, vaccines).",
+        "page_num":"~400+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"manuu-dde",
+        "source_link":"https://dde.manuu.edu.in/sites/default/files/DDE/DDE-SelfLearnmaterial/MA-English-3rd-Semester/PostcolonialLiterature.pdf",
+        "content":"Textbook/Course Material: **Postcolonial Literature** (Introduction). Distinguishes between colonization (taking control of territory) and colonialism (asserting power over body and mind). Defines postcolonialism as an ideological notion rooted in decolonization, a resistance to Eurocentrism, critiquing 'universal narratives.' Features Chinua Achebe's *Things Fall Apart*.",
+        "page_num":"~100+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Manonmaniam Sundaranar University",
+        "source_link":"https://www.msuniv.ac.in/images/distance%20education/learning%20materials/ug%20pg%202023/pg%202021/MA%20english%202023/SENM31-Post-colonial_Literature.pdf",
+        "content":"Learning Material: Post-colonial Literature. Covers **Key Concepts** like Centre/Margin (Periphery), Dislocation, Ecological Imperialism, and Hegemony. Discusses how post-colonial literature explores issues of place, dislocation, and the shared anxiety regarding identity and authenticity. Mentions works by Derek Walcott, Wole Soyinka, and Chinua Achebe.",
+        "page_num":"~100+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":null,
+        "source_link":null,
+        "content":null,
+        "page_num":null,
+        "document_type":null
+    },
+    {
+        "source_app":"Sage Publishing",
+        "source_link":"https://uk.sagepub.com/sites/default/files/upm-assets/72275_book_item_72275.pdf",
+        "content":"Book Chapter: Max Weber in Public Administration. Discusses Weber's distinctive contribution: placing administration, particularly **bureaucracy**, in a broad historical context as part of the general process of rationalization in Western societies. Notes Weber's 'ideal-type bureaucracy' as the most rational and efficient form of organization, but also highlights its flaws (oppressive routine, limiting individual freedom).",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CSUN",
+        "source_link":"http://www.csun.edu/~ctoth/Handbook/chap26.pdf",
+        "content":"Book Chapter: **CONVEX HULL** COMPUTATIONS. A catch-all phrase for computing various descriptions of a polytope. Discusses different versions of the problem and its relationship to the **halfspace intersection problem** via **polarity**. Defines various descriptions (vertex, facet, double description, etc.) and their geometric/combinatorial information.",
+        "page_num":"~40",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CSU-Erickson",
+        "source_link":"http://jeffe.cs.illinois.edu/teaching/compgeom/2008/notes/01-convexhull.pdf",
+        "content":"Lecture Notes: Computational Geometry - Convex Hulls. Defines the convex hull intuitively as what you get by 'wrapping a piece of string around the nails' (points). Formally, it's the smallest convex polygon containing the points. Explains the representation as a circular linked list of vertices in counterclockwise order.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UA-repository",
+        "source_link":"https://repository.uantwerpen.be/docman/irua/ee1b9b/the_feudal_origins_of_manorial_prosperity_social_interactions_in_eleventh_century_england.pdf",
+        "content":"Paper: The **Feudal Origins of Manorial Prosperity**. Reinterprets the eleventh-century English **feudal system** using Domesday Book as a network in which manors are linked by common ownership. Investigates the existence of external economies of scale, where manorial prosperity is intertwined with the fortune of feudal peers.",
+        "page_num":"~40",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"DSpace at Debra College",
+        "source_link":"http://debracollege.dspaces.org/bitstream/123456789/510/1/%5BMarc_Bloch%5D_Feudal_Society__Vol_2__Social_Classes%28z-lib.org%29.pdf",
+        "content":"Textbook (Marc Bloch): **FEUDAL SOCIETY: Social Classes and Political Organization**. Focuses on the transformation of the nobility into a legal class. Discusses the three estates (nobility, clergy, peasantry), the judicial institutions, and the process towards the reconstruction of states (monarchies).",
+        "page_num":"~200+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"American Chemical Society",
+        "source_link":"https://pubs.acs.org/doi/pdf/10.1021/acs.macromol.5c00980?ref=article_openPDF",
+        "content":"Paper: Cyclization in Linear **Step-Growth Polymerizations**. Focuses on intramolecular cyclization, a factor often ignored in SGP, particularly under dilute conditions. Uses a reverse-engineering strategy with symbolic regression to extract explicit formulas for cyclization probability, degree of cyclization, and molecular weights from experimental data for a classical A2 + B2 system.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Sathyabama",
+        "source_link":"https://sist.sathyabama.ac.in/sist_coursematerial/uploads/SCY1616.pdf",
+        "content":"Course Material: **POLYMER CHEMISTRY**. Compares addition polymerization (monomers add without elimination, e.g., Ethylene to polyethylene) and **condensation polymerization** (monomers condense, small molecules eliminated, e.g., Nylon 66). Discusses Degree of Polymerisation and the formation of thermoplastics vs. thermosets.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"JST",
+        "source_link":"https://www.jst.go.jp/kisoken/crest/evaluation/s-houkoku/sh_h28/JST_1111065_11103781_2016_PER.pdf",
+        "content":"Project Report Snippet: Marine Biology Research. Mentions a paper **Quantifying dispersal from hydrothermal vent fields in the western Pacific ocean** by Mitarai et al., focusing on deep-sea vent ecology research, and a Deep sea vent ecology workshop.",
+        "page_num":"~50",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"SCIRP.org",
+        "source_link":"https://www.scirp.org/pdf/OJPChem20120400002_50254095.pdf",
+        "content":"Article: Teaching Polymer Chemistry: Revisiting the Syllabus. Discusses the structure of a polymer chemistry course, often starting with **step-growth chemistry** (polycondensation, polyaddition) as an extension of esterification, followed by chain polymerizations (anionic, cationic, radical). Emphasizes the statistical character of polymerization leading to a distribution of chain lengths/molecular weights.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Imperial College London",
+        "source_link":"https://www.imperial.ac.uk/media/imperial-college/research-centres-and-groups/theoretical-physics/msc/current/qft/problem-sheets-and-solutions/qftProblemSheet7.pdf",
+        "content":"Problem Sheet: Interacting Quantum Field Theory: **$lambdaphi^4$**. Problem sheet covering Feynman rules and the concept of **Feynman diagrams** in Quantum Field Theory (QFT). Includes classifying diagrams for the Green function by the number of components.",
+        "page_num":"~10",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"UNAM",
+        "source_link":"https://nucleares.unam.mx/~alberto/apuntes/banks.pdf",
+        "content":"Textbook: Modern **Quantum Field Theory**: A Concise Introduction. Provides an introduction to QFT techniques, covering **Feynman diagrams** and path integrals. Emphasizes that many important points are left for exercises (problems) to encourage hands-on learning.",
+        "page_num":"~300",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"CORE",
+        "source_link":"https://core.ac.uk/download/pdf/232536157.pdf",
+        "content":"Thesis: The Evolution of the **Medici** Portrait: From Business to Politics. Analyzes the **art patronage** of Cosimo 'il Vecchio' and Grand Duke Cosimo 'il Primo'. Argues a correlation between the decline of Medici business/rise in political involvement and the proliferation of dynastic and propagandistic portraiture.",
+        "page_num":"~200+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"download.e-bookshelf.de",
+        "source_link":"https://download.e-bookshelf.de/download/0000/7582/24/L-G-0000758224-0002287983.pdf",
+        "content":"Book Chapter: A Taxonomy of Art **Patronage in Renaissance** Italy. Part of a Companion to Renaissance and Baroque Art, this chapter provides a framework for understanding the social-historical factors in artistic production, with patronage as a key element.",
+        "page_num":"~600+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Barr Engineering",
+        "source_link":"https://www.barr.com/wp-content/uploads/2025/06/State-Parameter-and-Undrained-Shear-Strength-of-Mine-Tailings-3.pdf",
+        "content":"Paper: State Parameter and Undrained **Shear Strength** of Mine Tailings. Discusses technical challenges in determining undrained shear strength, which is largely controlled by soil fabric and void ratio. Uses the Critical State Soil Mechanics (CSSM) framework, which links compressibility and **shear behavior** in an effective stress approach. Mentions Casagrande's concept of 'critical void ratio' and the Critical State Line (**CSL**).",
+        "page_num":"~40",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"modernlanguages.sas.ac.uk",
+        "source_link":"https://modernlanguages.sas.ac.uk/aintegrateo/632V5O0/lnegotiatev/346V0O7873/soil+mechanics+problems+and+solutions.pdf",
+        "content":"Book: **Soil Mechanics** Problems And Solutions. A reference guide with step-by-step solutions to problems in geotechnical engineering. Topics covered include **effective stress**, permeability, settlement calculations, plasticity, and **shear strength** and **consolidation** theory.",
+        "page_num":"~500+",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"Adelphi University",
+        "source_link":"https://home.adelphi.edu/~siegfried/cs553/553l6.pdf",
+        "content":"Lecture Notes: Operating Systems - **Concurrency: Deadlock** and Starvation. Defines deadlock as the permanent blocking of a set of processes awaiting an event that only another blocked process can trigger. Details the four necessary conditions for deadlock (mutual exclusion, hold and wait, no preemption, circular wait) and the strategies for dealing with it (prevention, avoidance, detection).",
+        "page_num":"~15",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"PVPSIT",
+        "source_link":"https://www.pvpsiddhartha.ac.in/dep_it/lecture%20notes/OS_PVP20/PVP20%20OS%20UNIT-3%20MATERIAL.pdf",
+        "content":"Course Material: OS UNIT-3 Material. Discusses **concurrency** and data inconsistency due to concurrent access to shared data, leading to **race conditions**. Explains how the lack of proper resource allocation can lead to **deadlock** when processes are waiting for a resource held by another. Defines the **critical section** as code accessing a shared resource that must not be concurrently accessed.",
+        "page_num":"~50",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"AGH University of Science and Technology",
+        "source_link":"https://home.agh.edu.pl/~horzyk/lectures/ci/CI-DeepLearningStrategies.pdf",
+        "content":"Lecture Notes: Deep Learning Strategies and Networks. Introduces **Deep Convolutional Networks (CNNs)**, noting they avoid all-to-all connection strategy and specialize neurons in recognizing subpatterns. Explains the structure of CNNs (convolutional layers, pooling layers) and the use of **backpropagation** (often preceded by pre-training) for fine-tuning.",
+        "page_num":"~30",
+        "document_type":"pdf"
+    },
+    {
+        "source_app":"eCognition Documentation",
+        "source_link":"https://docs.ecognition.com/v9.5.0/Resources/Images/Tutorial%207%20-%20Convolutional%20Neural%20Networks%20in%20eCognition.pdf",
+        "content":"Tutorial: **Convolutional Neural Networks** in eCognition. A practical guide on creating, training, and applying CNNs for image classification. Explains the typical hidden layer stages (local convolution with trainable weights and max-pooling) and the use of training and test regions.",
+        "page_num":"~20",
+        "document_type":"pdf"
+    }
+]

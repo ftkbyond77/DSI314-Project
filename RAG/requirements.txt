@@ -1,0 +1,25 @@
+# Base
+pinecone
+python-dotenv
+pandas
+
+# PDF & Document extraction
+PyPDF2               # อ่าน PDF
+pdfplumber           # alternative PDF text extraction
+python-docx          # อ่าน Word documents
+tika                 # อ่าน PDF/Word/PowerPoint formats
+tiktoken
+
+# Text processing / Chunking
+nltk                 # Tokenization, sentence splitting
+spacy                # NLP processing
+regex                # Text cleaning with regex
+
+# OpenAI API for embeddings
+openai               # text embedding
+
+# Optional utilities
+tqdm                 # progress bars
+psutil
+
+openpyxl # Excel Export

@@ -1,0 +1,9 @@
+docker-compose run --rm RAG_KnowledgeBase
+    # extract documents
+    python Extract/extract.py
+    # chunk & embed
+    python VectorDB/app/main.py
+
+# OR
+docker-compose run --rm RAG_KnowledgeBase python Extract/extract.py
+docker-compose run --rm RAG_KnowledgeBase python VectorDB/app/main.py

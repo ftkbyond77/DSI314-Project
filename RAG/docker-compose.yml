@@ -1,0 +1,12 @@
+services:
+  rag_vectordb:
+    build: .
+    container_name: RAG_KnowledgeBase
+    env_file:
+      - ./.env               
+      - ./VectorDB/app/.env  
+    volumes:
+      - .:/app             
+    working_dir: /app
+    restart: unless-stopped
+    tty: true
