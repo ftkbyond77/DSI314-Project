@@ -4,6 +4,7 @@ from typing import List, Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from .llm_config import llm
 import json
+import re
 
 class KnowledgeGroundedReasoningEngine:
     """

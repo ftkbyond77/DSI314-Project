@@ -185,20 +185,6 @@ class EnhancedTaskAnalysisInput(BaseModel):
 
 # core/agent_tools_advanced.py - UPDATED with Knowledge Grounding Integration
 
-from langchain.tools import BaseTool
-from typing import Type, List, Dict, Optional
-from pydantic import BaseModel, Field
-from datetime import datetime, timedelta
-import json
-import time
-import re
-from enum import Enum
-
-# Import knowledge grounding
-from .knowledge_weighting import enhance_task_with_knowledge, SchemaHandler
-
-# ... [Keep all existing code from your agent_tools_advanced.py] ...
-
 class EnhancedTaskAnalysisInput(BaseModel):
     """Enhanced input with sorting preferences"""
     task_name: str = Field(description="Task/document name")

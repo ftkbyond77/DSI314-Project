@@ -12,3 +12,27 @@ python manage.py kb_admin health
 
 # Show statistics
 python manage.py kb_admin stats
+
+
+# List all discovered categories
+python manage.py kb_categories list
+
+# Discover categories from KB
+python manage.py kb_categories discover
+
+# Show info about a specific category
+python manage.py kb_categories info --category mathematics
+
+# Test normalization
+python manage.py kb_categories test --input "advanced machine learning"
+python manage.py kb_categories test --input "CS101"
+python manage.py kb_categories test --input "intro to biology"
+
+# Refresh system after KB updates
+python manage.py kb_categories refresh
+
+# Export patterns for backup
+python manage.py kb_categories export --file my_categories.json
+
+# Import custom patterns
+python manage.py kb_categories import --file my_categories.json

@@ -162,3 +162,21 @@ print("\n=== Configuration Summary ===")
 for key, value in config.items():
     print(f"{key}: {value}")
 print("=" * 30 + "\n")
+
+def get_vector_store(namespace: str = None):
+    """
+    Get initialized PineconeVectorStore for langchain_community.
+    
+    Args:
+        namespace: Optional Pinecone namespace
+    
+    Returns:
+        Initialized PineconeVectorStore
+    """
+    from langchain_community.vectorstores import Pinecone as PineconeVectorStore
+    
+    return PineconeVectorStore.from_existing_index(
+        index_name=INDEX_NAME,
+        embedding=embeddings,
+        namespace=namespace
+    )

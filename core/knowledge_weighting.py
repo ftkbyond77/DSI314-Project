@@ -1,8 +1,9 @@
-# core/knowledge_weighting.py - Production Knowledge-Grounded Relevance System
-# Features: Flexible schema, robust fallbacks, domain calibration, cache management
+# core/knowledge_weighting.py - FIXED for langchain_community.vectorstores
+# Production Knowledge Grounding System with Dynamic Calibration
 
 from typing import List, Dict, Tuple, Optional, Any
-from langchain_pinecone import PineconeVectorStore
+# from langchain_community.vectorstores import Pinecone as PineconeVectorStore
+from langchain_pinecone import Pinecone as PineconeVectorStore
 from .llm_config import embeddings, INDEX_NAME
 import numpy as np
 from collections import defaultdict
@@ -11,477 +12,1180 @@ import json
 from datetime import datetime, timedelta
 from django.core.cache import cache
 from pinecone import Pinecone
+import random
+import re
+
+
+# ==================== PINECONE HELPER ====================
+
+def get_pinecone_vectorstore(index_name: str = None, namespace: str = None):
+    """
+    Get PineconeVectorStore for langchain_community version.
+    
+    Args:
+        index_name: Name of the Pinecone index
+        namespace: Optional namespace
+    
+    Returns:
+        PineconeVectorStore instance
+    """
+    if index_name is None:
+        index_name = INDEX_NAME
+    
+    # Initialize Pinecone client
+    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    index = pc.Index(index_name)
+    
+    # Create vector store using from_existing_index
+    vector_store = PineconeVectorStore.from_existing_index(
+        index_name=index_name,
+        embedding=embeddings,
+        namespace=namespace
+    )
+    
+    return vector_store
+
+
+# ==================== DYNAMIC CATEGORY SYSTEM ====================
+
+class DynamicCategoryMapper:
+    """
+    Dynamic, learning-based category normalization system.
+    
+    Features:
+    - Auto-discovers categories from KB
+    - No hardcoded category patterns
+    - Uses fuzzy matching and semantic similarity
+    - Learns from actual KB distribution
+    - Supports unlimited categories
+    """
+    
+    CACHE_KEY_CATEGORIES = "kb_dynamic_categories_v1"
+    CACHE_KEY_PATTERNS = "kb_category_patterns_v1"
+    CACHE_TIMEOUT = 7200  # 2 hours
+    
+    # Minimal seed patterns for bootstrapping (expandable)
+    SEED_PATTERNS = {
+        'mathematics': ['math', 'calculus', 'algebra'],
+        'science': ['physics', 'chemistry', 'biology'],
+        'programming': ['programming', 'coding', 'software'],
+        'business': ['business', 'management', 'marketing'],
+    }
+    
+    def __init__(self, enable_learning: bool = True, similarity_threshold: float = 0.9):
+        """
+        Initialize dynamic mapper.
+        
+        Args:
+            enable_learning: Enable learning new patterns from KB
+            similarity_threshold: Fuzzy matching threshold (0-1)
+        """
+        self.enable_learning = enable_learning
+        self.similarity_threshold = similarity_threshold
+        self._category_cache = None
+        self._pattern_cache = None
+    
+    def normalize_category(self, category: str, learn: bool = True) -> str:
+        """
+        Normalize category name dynamically.
+        
+        Args:
+            category: Input category string
+            learn: Whether to learn from this input
+        
+        Returns:
+            Normalized category name
+        """
+        if not category or not isinstance(category, str):
+            return 'general'
+        
+        cat_clean = self._clean_category_string(category)
+        
+        if not cat_clean:
+            return 'general'
+        
+        # Get current category mappings
+        patterns = self._get_category_patterns()
+        
+        # Try exact match first
+        if cat_clean in patterns:
+            return cat_clean
+        
+        # Try fuzzy matching
+        matched = self._fuzzy_match_category(cat_clean, patterns)
+        
+        if matched:
+            # Learn this mapping for future use
+            if learn and self.enable_learning:
+                self._learn_category_mapping(cat_clean, matched)
+            return matched
+        
+        # No match - treat as new category
+        if learn and self.enable_learning:
+            self._register_new_category(cat_clean)
+        
+        return cat_clean
+    
+    def _clean_category_string(self, category: str) -> str:
+        """Clean and normalize category string."""
+        # Convert to lowercase
+        clean = category.lower().strip()
+        
+        # Remove special characters except spaces and underscores
+        clean = ''.join(c if c.isalnum() or c in ' _-' else ' ' for c in clean)
+        
+        # Normalize whitespace
+        clean = ' '.join(clean.split())
+        
+        # Replace spaces with underscores for consistency
+        clean = clean.replace(' ', '_')
+        
+        # Remove leading/trailing underscores
+        clean = clean.strip('_')
+        
+        return clean
+    
+    def _fuzzy_match_category(self, category: str, patterns: Dict) -> Optional[str]:
+        """
+        Fuzzy match category against known patterns.
+        
+        Args:
+            category: Input category
+            patterns: Current category patterns
+        
+        Returns:
+            Matched category or None
+        """
+        # Tokenize input
+        cat_tokens = set(category.replace('_', ' ').split())
+        
+        best_match = None
+        best_score = 0.0
+        
+        for standard_cat, keywords in patterns.items():
+            # Calculate overlap score
+            keyword_tokens = set()
+            for kw in keywords:
+                keyword_tokens.update(kw.replace('_', ' ').split())
+            
+            # Intersection over union (Jaccard similarity)
+            intersection = cat_tokens & keyword_tokens
+            union = cat_tokens | keyword_tokens
+            
+            if union:
+                score = len(intersection) / len(union)
+                
+                # Boost score if substring match exists
+                if any(kw in category for kw in keywords):
+                    score += 0.3
+                
+                # Boost score if exact token match
+                if any(token in keywords for token in cat_tokens):
+                    score += 0.2
+                
+                if score > best_score:
+                    best_score = score
+                    best_match = standard_cat
+        
+        # Return match if above threshold
+        if best_score >= self.similarity_threshold:
+            return best_match
+        
+        return None
+    
+    def _get_category_patterns(self) -> Dict[str, List[str]]:
+        """
+        Get current category patterns (learned + seed).
+        
+        Returns:
+            Dict mapping category -> list of keywords
+        """
+        # Try cache first
+        if self._pattern_cache:
+            return self._pattern_cache
+        
+        cached = cache.get(self.CACHE_KEY_PATTERNS)
+        if cached:
+            self._pattern_cache = cached
+            return cached
+        
+        # Initialize with seed patterns
+        patterns = dict(self.SEED_PATTERNS)
+        
+        # Load learned patterns from KB
+        if self.enable_learning:
+            learned = self._load_learned_patterns()
+            
+            # Merge learned patterns
+            for cat, keywords in learned.items():
+                if cat in patterns:
+                    patterns[cat] = list(set(patterns[cat] + keywords))
+                else:
+                    patterns[cat] = keywords
+        
+        # Cache and return
+        cache.set(self.CACHE_KEY_PATTERNS, patterns, self.CACHE_TIMEOUT)
+        self._pattern_cache = patterns
+        
+        return patterns
+    
+    def _load_learned_patterns(self) -> Dict[str, List[str]]:
+        """
+        Load learned patterns from KB sampling.
+        Discovers actual categories and their variations in the KB.
+        """
+        try:
+            # FIXED: Use helper function
+            vector_store = get_pinecone_vectorstore(INDEX_NAME)
+            
+            # Sample vectors to discover categories
+            learned_patterns = defaultdict(set)
+            
+            # Use diverse queries to sample KB
+            sample_queries = [
+                "study learning education",
+                "analysis research data",
+                "development software code",
+                "business finance economics"
+            ]
+            
+            for query in sample_queries:
+                try:
+                    results = vector_store.similarity_search(query=query, k=50)
+                    
+                    for doc in results:
+                        meta = doc.metadata
+                        
+                        # Extract category variations
+                        for field in ['category', 'subject', 'domain', 'field', 'type']:
+                            if field in meta and meta[field]:
+                                cat_value = str(meta[field]).lower().strip()
+                                
+                                if cat_value and len(cat_value) > 2:
+                                    # Extract main category and add as keyword
+                                    main_cat = self._extract_main_category(cat_value)
+                                    
+                                    if main_cat:
+                                        # Add variations as keywords
+                                        learned_patterns[main_cat].add(cat_value)
+                                        learned_patterns[main_cat].update(cat_value.split('_'))
+                                        learned_patterns[main_cat].update(cat_value.split())
+                
+                except Exception as e:
+                    print(f"⚠️ Pattern learning query failed: {e}")
+                    continue
+            
+            # Convert sets to lists and filter
+            result = {}
+            for cat, keywords in learned_patterns.items():
+                # Filter out very short or common words
+                filtered = [kw for kw in keywords if len(kw) > 2 and kw not in ['the', 'and', 'or', 'for']]
+                if filtered:
+                    result[cat] = filtered[:20]  # Limit to top 20 keywords
+            
+            return result
+            
+        except Exception as e:
+            print(f"⚠️ Pattern learning failed: {e}")
+            return {}
+    
+    def _extract_main_category(self, category_value: str) -> Optional[str]:
+        """
+        Extract main category from complex category string.
+        
+        Examples:
+            "computer_science_101" -> "computer_science"
+            "advanced mathematics" -> "mathematics"
+            "intro to physics" -> "physics"
+        """
+        # Remove common prefixes
+        prefixes = ['intro', 'introduction', 'advanced', 'basic', 'intermediate', 'to']
+        tokens = category_value.replace('_', ' ').split()
+        
+        # Filter out prefixes and numbers
+        main_tokens = [
+            t for t in tokens 
+            if t not in prefixes and not t.isdigit() and len(t) > 2
+        ]
+        
+        if not main_tokens:
+            return None
+        
+        # Return first meaningful token or combined
+        if len(main_tokens) == 1:
+            return main_tokens[0]
+        elif len(main_tokens) == 2:
+            return '_'.join(main_tokens)
+        else:
+            # Take first two most meaningful tokens
+            return '_'.join(main_tokens[:2])
+    
+    def _learn_category_mapping(self, input_category: str, matched_category: str):
+        """
+        Learn that input_category maps to matched_category.
+        Updates patterns for future use.
+        """
+        try:
+            patterns = self._get_category_patterns()
+            
+            # Add input as keyword for matched category
+            if matched_category in patterns:
+                if input_category not in patterns[matched_category]:
+                    patterns[matched_category].append(input_category)
+                    
+                    # Update cache
+                    cache.set(self.CACHE_KEY_PATTERNS, patterns, self.CACHE_TIMEOUT)
+                    self._pattern_cache = patterns
+                    
+                    print(f"   📚 Learned: '{input_category}' → '{matched_category}'")
+        
+        except Exception as e:
+            print(f"⚠️ Failed to learn mapping: {e}")
+    
+    def _register_new_category(self, category: str):
+        """
+        Register a new category discovered in data.
+        """
+        try:
+            patterns = self._get_category_patterns()
+            
+            if category not in patterns:
+                # Create new pattern entry
+                patterns[category] = [category]
+                
+                # Add tokens as keywords
+                tokens = category.replace('_', ' ').split()
+                patterns[category].extend([t for t in tokens if len(t) > 2])
+                
+                # Update cache
+                cache.set(self.CACHE_KEY_PATTERNS, patterns, self.CACHE_TIMEOUT)
+                self._pattern_cache = patterns
+                
+                print(f"   🆕 New category registered: '{category}'")
+        
+        except Exception as e:
+            print(f"⚠️ Failed to register category: {e}")
+    
+    def get_all_categories(self) -> List[str]:
+        """
+        Get all known categories.
+        
+        Returns:
+            List of category names
+        """
+        patterns = self._get_category_patterns()
+        return sorted(patterns.keys())
+    
+    def get_category_info(self, category: str) -> Dict:
+        """
+        Get information about a category.
+        
+        Returns:
+            Dict with keywords, variations, etc.
+        """
+        patterns = self._get_category_patterns()
+        
+        if category in patterns:
+            return {
+                'category': category,
+                'keywords': patterns[category],
+                'keyword_count': len(patterns[category]),
+                'is_learned': category not in self.SEED_PATTERNS,
+                'exists': True
+            }
+        
+        return {
+            'category': category,
+            'keywords': [],
+            'keyword_count': 0,
+            'is_learned': False,
+            'exists': False
+        }
+    
+    def refresh_patterns(self):
+        """Force refresh of category patterns from KB."""
+        cache.delete(self.CACHE_KEY_PATTERNS)
+        self._pattern_cache = None
+        self._get_category_patterns()
+        print("✅ Category patterns refreshed")
+    
+    def export_patterns(self) -> Dict:
+        """Export current patterns for backup/analysis."""
+        return self._get_category_patterns()
+    
+    def import_patterns(self, patterns: Dict):
+        """Import custom patterns."""
+        cache.set(self.CACHE_KEY_PATTERNS, patterns, self.CACHE_TIMEOUT)
+        self._pattern_cache = patterns
+        print(f"✅ Imported {len(patterns)} category patterns")
+
+
+# ==================== SCHEMA HANDLER ====================
 
 class SchemaHandler:
     """
-    Handles flexible schema mapping for documents with different structures.
-    Ensures robust field extraction with fallbacks.
+    Flexible schema handler with dynamic category normalization.
     """
     
-    # Standard field mappings with fallback aliases
-    FIELD_MAPPINGS = {
-        'category': ['category', 'subject', 'domain', 'field', 'topic_area', 'discipline'],
-        'complexity': ['complexity', 'difficulty', 'level', 'complexity_score', 'difficulty_level'],
-        'topic': ['topic', 'title', 'subject', 'theme', 'chapter'],
-        'source_type': ['source_type', 'document_type', 'type', 'doc_type', 'material_type'],
-        'file': ['file', 'filename', 'source', 'document', 'doc_name'],
-        'pages': ['pages', 'page_count', 'num_pages', 'total_pages'],
-        'author': ['author', 'authors', 'creator', 'instructor'],
-        'year': ['year', 'date', 'published', 'created_at'],
-        'institution': ['institution', 'university', 'school', 'organization']
+    # Field synonyms
+    FIELD_SYNONYMS = {
+        'category': ['category', 'subject', 'domain', 'field', 'topic_area', 'discipline', 'type'],
+        'complexity': ['complexity', 'difficulty', 'level', 'complexity_score', 'difficulty_level', 'grade'],
+        'topic': ['topic', 'title', 'subject', 'theme', 'chapter', 'name'],
+        'source_type': ['source_type', 'document_type', 'type', 'doc_type', 'material_type', 'kind'],
+        'file': ['file', 'filename', 'source', 'document', 'doc_name', 'path'],
+        'pages': ['pages', 'page_count', 'num_pages', 'total_pages', 'length'],
     }
     
-    # Default values for missing fields
-    DEFAULTS = {
-        'category': 'general',
-        'complexity': 5,
-        'topic': 'unknown',
-        'source_type': 'unknown',
-        'file': 'unknown',
-        'pages': 0,
-        'author': 'unknown',
-        'year': None,
-        'institution': 'unknown'
+    TYPE_DEFAULTS = {
+        'str': 'unknown',
+        'int': 0,
+        'float': 0.0,
+        'bool': False,
     }
+    
+    # Initialize dynamic category mapper (class-level singleton)
+    _category_mapper = None
     
     @classmethod
-    def extract_field(cls, metadata: Dict, field_name: str, default: Any = None) -> Any:
+    def get_category_mapper(cls) -> DynamicCategoryMapper:
+        """Get or create category mapper instance."""
+        if cls._category_mapper is None:
+            cls._category_mapper = DynamicCategoryMapper(
+                enable_learning=True,
+                similarity_threshold=0.6  # Adjustable
+            )
+        return cls._category_mapper
+    
+    @classmethod
+    def extract_field(cls, metadata: Dict, field_name: str, expected_type: str = 'str', default: Any = None) -> Any:
         """
-        Flexibly extract field from metadata with multiple fallback aliases.
-        
-        Args:
-            metadata: Document metadata dict
-            field_name: Standard field name
-            default: Default value if not found
-        
-        Returns:
-            Field value or default
+        Flexibly extract field with type safety and fallbacks.
         """
         if not metadata:
-            return default if default is not None else cls.DEFAULTS.get(field_name)
+            return default if default is not None else cls.TYPE_DEFAULTS.get(expected_type, 'unknown')
         
-        # Try all aliases for this field
-        aliases = cls.FIELD_MAPPINGS.get(field_name, [field_name])
+        # Try all synonyms
+        synonyms = cls.FIELD_SYNONYMS.get(field_name, [field_name])
         
-        for alias in aliases:
-            if alias in metadata and metadata[alias] is not None:
-                value = metadata[alias]
-                # Normalize value
-                return cls._normalize_value(field_name, value)
+        for synonym in synonyms:
+            if synonym in metadata and metadata[synonym] is not None:
+                value = metadata[synonym]
+                return cls._normalize_by_type(value, expected_type, field_name)
         
-        # Return default if not found
-        return default if default is not None else cls.DEFAULTS.get(field_name)
+        return default if default is not None else cls.TYPE_DEFAULTS.get(expected_type, 'unknown')
     
     @classmethod
-    def _normalize_value(cls, field_name: str, value: Any) -> Any:
-        """
-        Normalize field values to standard formats.
-        """
-        if value is None:
-            return cls.DEFAULTS.get(field_name)
+    def _normalize_by_type(cls, value: Any, expected_type: str, field_name: str) -> Any:
+        """Type-aware normalization with dynamic category handling."""
         
-        # Category normalization
-        if field_name == 'category':
-            return cls._normalize_category(value)
+        if expected_type == 'str':
+            if isinstance(value, str):
+                normalized = value.strip().lower()
+                # Use dynamic category normalization
+                if field_name == 'category':
+                    mapper = cls.get_category_mapper()
+                    return mapper.normalize_category(normalized, learn=True)
+                return normalized
+            return str(value).lower()
         
-        # Complexity normalization (ensure 1-10 scale)
-        elif field_name == 'complexity':
+        elif expected_type == 'int':
             try:
-                comp = float(value)
-                return int(max(1, min(10, comp)))
+                val = int(float(value))
+                if field_name == 'complexity':
+                    return max(1, min(10, val))
+                return max(0, val)
             except (ValueError, TypeError):
-                return 5
+                return 5 if field_name == 'complexity' else 0
         
-        # Pages normalization
-        elif field_name == 'pages':
+        elif expected_type == 'float':
             try:
-                return int(value)
+                return float(value)
             except (ValueError, TypeError):
-                return 0
+                return 0.0
         
-        # Source type normalization
-        elif field_name == 'source_type':
-            return cls._normalize_source_type(value)
-        
-        # String fields - clean
-        elif isinstance(value, str):
-            return value.strip().lower()
+        elif expected_type == 'bool':
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.lower() in ['true', 'yes', '1', 'y']
+            return bool(value)
         
         return value
-    
-    @classmethod
-    def _normalize_category(cls, category: str) -> str:
-        """
-        Normalize category names to standard taxonomy.
-        """
-        if not isinstance(category, str):
-            return 'general'
-        
-        cat_lower = category.lower().strip()
-        
-        # Mapping variations to standard categories
-        category_map = {
-            # STEM
-            'math': 'mathematics',
-            'maths': 'mathematics',
-            'calculus': 'mathematics',
-            'statistics': 'mathematics',
-            'algebra': 'mathematics',
-            'geometry': 'mathematics',
-            
-            # Data & CS
-            'data': 'data_science',
-            'ml': 'data_science',
-            'machine learning': 'data_science',
-            'ai': 'data_science',
-            'analytics': 'data_science',
-            'cs': 'programming',
-            'computer science': 'programming',
-            'coding': 'programming',
-            'software': 'programming',
-            
-            # Science
-            'physics': 'science',
-            'chemistry': 'science',
-            'biology': 'science',
-            'engineering': 'science',
-            
-            # Business
-            'management': 'business',
-            'marketing': 'business',
-            'strategy': 'business',
-            'economics': 'finance',
-            'accounting': 'finance',
-            'investing': 'finance',
-            
-            # Academic
-            'exam': 'exam_prep',
-            'test': 'exam_prep',
-            'midterm': 'exam_prep',
-            'final': 'exam_prep',
-            'quiz': 'exam_prep',
-            'research': 'research',
-            'thesis': 'research',
-            'paper': 'research',
-            'dissertation': 'research'
-        }
-        
-        # Check for matches
-        for key, standard in category_map.items():
-            if key in cat_lower:
-                return standard
-        
-        # Return as-is if no mapping found
-        return cat_lower if cat_lower else 'general'
-    
-    @classmethod
-    def _normalize_source_type(cls, source_type: str) -> str:
-        """
-        Normalize source type to standard taxonomy.
-        """
-        if not isinstance(source_type, str):
-            return 'unknown'
-        
-        st_lower = source_type.lower().strip()
-        
-        type_map = {
-            'textbook': 'textbook',
-            'book': 'textbook',
-            'text': 'textbook',
-            'paper': 'research_paper',
-            'research': 'research_paper',
-            'journal': 'research_paper',
-            'article': 'research_paper',
-            'course': 'course_material',
-            'lecture': 'course_material',
-            'slides': 'course_material',
-            'notes': 'course_material',
-            'assignment': 'assignment',
-            'homework': 'assignment',
-            'project': 'assignment',
-            'exercise': 'assignment',
-            'exam': 'exam_material',
-            'test': 'exam_material',
-            'quiz': 'exam_material',
-            'practice': 'exam_material'
-        }
-        
-        for key, standard in type_map.items():
-            if key in st_lower:
-                return standard
-        
-        return 'unknown'
     
     @classmethod
     def standardize_metadata(cls, metadata: Dict) -> Dict:
         """
         Convert any metadata schema to standardized format.
-        
-        Returns:
-            Standardized metadata dict with all expected fields
+        Uses dynamic category normalization.
         """
         return {
-            'category': cls.extract_field(metadata, 'category'),
-            'complexity': cls.extract_field(metadata, 'complexity'),
-            'topic': cls.extract_field(metadata, 'topic'),
-            'source_type': cls.extract_field(metadata, 'source_type'),
-            'file': cls.extract_field(metadata, 'file'),
-            'pages': cls.extract_field(metadata, 'pages'),
-            'author': cls.extract_field(metadata, 'author'),
-            'year': cls.extract_field(metadata, 'year'),
-            'institution': cls.extract_field(metadata, 'institution'),
-            '_original': metadata  # Keep original for reference
+            'category': cls.extract_field(metadata, 'category', 'str'),
+            'complexity': cls.extract_field(metadata, 'complexity', 'int'),
+            'topic': cls.extract_field(metadata, 'topic', 'str'),
+            'source_type': cls.extract_field(metadata, 'source_type', 'str'),
+            'file': cls.extract_field(metadata, 'file', 'str'),
+            'pages': cls.extract_field(metadata, 'pages', 'int'),
+            '_original': metadata  # Preserve original
         }
+    
+    @classmethod
+    def get_all_discovered_categories(cls) -> List[str]:
+        """Get all categories discovered in KB."""
+        mapper = cls.get_category_mapper()
+        return mapper.get_all_categories()
+    
+    @classmethod
+    def get_category_statistics(cls) -> Dict:
+        """Get statistics about category mappings."""
+        mapper = cls.get_category_mapper()
+        all_cats = mapper.get_all_categories()
+        
+        stats = {
+            'total_categories': len(all_cats),
+            'categories': []
+        }
+        
+        for cat in all_cats:
+            info = mapper.get_category_info(cat)
+            stats['categories'].append(info)
+        
+        return stats
+    
+    @classmethod
+    def refresh_category_system(cls):
+        """Refresh category discovery system."""
+        mapper = cls.get_category_mapper()
+        mapper.refresh_patterns()
 
 
-class DomainCalibration:
+# ==================== DYNAMIC CALIBRATION ENGINE ====================
+
+class DynamicCalibrationEngine:
     """
-    Domain-specific calibration parameters based on actual data distribution.
-    Updated to reflect real academic materials: textbooks, research, courses, assignments.
+    Dynamic, data-driven calibration that adapts to actual KB distribution.
+    No hardcoded domain rules - learns from KB statistics.
     """
     
-    # Calibration parameters per domain
-    # Format: {base: expected mean similarity, spread: std dev, boost: importance multiplier}
-    CALIBRATION = {
-        # STEM domains - typically high similarity within domain
-        'mathematics': {
-            'base': 0.72,
-            'spread': 0.18,
-            'boost': 1.25,
-            'typical_sources': ['textbook', 'course_material', 'assignment'],
-            'characteristics': 'High internal coherence, formal notation'
-        },
-        'data_science': {
-            'base': 0.68,
-            'spread': 0.22,
-            'boost': 1.20,
-            'typical_sources': ['textbook', 'research_paper', 'course_material'],
-            'characteristics': 'Rapidly evolving, mixed theory and practice'
-        },
-        'programming': {
-            'base': 0.70,
-            'spread': 0.20,
-            'boost': 1.15,
-            'typical_sources': ['textbook', 'course_material', 'assignment'],
-            'characteristics': 'Code-heavy, practical focus'
-        },
-        'science': {
-            'base': 0.69,
-            'spread': 0.21,
-            'boost': 1.15,
-            'typical_sources': ['textbook', 'research_paper', 'course_material'],
-            'characteristics': 'Experimental, data-driven'
-        },
-        
-        # Business & Finance - moderate similarity
-        'finance': {
-            'base': 0.64,
-            'spread': 0.25,
-            'boost': 1.05,
-            'typical_sources': ['textbook', 'course_material', 'research_paper'],
-            'characteristics': 'Market-sensitive, applied economics'
-        },
-        'business': {
-            'base': 0.62,
-            'spread': 0.28,
-            'boost': 1.00,
-            'typical_sources': ['textbook', 'course_material', 'case_study'],
-            'characteristics': 'Case-based, contextual'
-        },
-        
-        # Academic activities - higher importance modifiers
-        'exam_prep': {
-            'base': 0.75,
-            'spread': 0.16,
-            'boost': 1.35,
-            'typical_sources': ['exam_material', 'course_material'],
-            'characteristics': 'High-stakes, time-sensitive'
-        },
-        'research': {
-            'base': 0.65,
-            'spread': 0.24,
-            'boost': 1.10,
-            'typical_sources': ['research_paper', 'thesis'],
-            'characteristics': 'Novel contributions, specialized'
-        },
-        
-        # Default
-        'general': {
-            'base': 0.60,
-            'spread': 0.28,
-            'boost': 1.00,
-            'typical_sources': ['unknown'],
-            'characteristics': 'Broad, varied content'
-        }
-    }
-    
-    # Source type importance multipliers
-    SOURCE_TYPE_WEIGHTS = {
-        'textbook': 1.10,          # Foundational, comprehensive
-        'research_paper': 1.15,    # Cutting-edge, specialized
-        'course_material': 1.05,   # Structured learning
-        'assignment': 1.20,        # Practice, application
-        'exam_material': 1.30,     # High-stakes preparation
-        'unknown': 1.00
-    }
-    
-    @classmethod
-    def get_parameters(cls, category: str) -> Dict:
-        """Get calibration parameters for a category."""
-        return cls.CALIBRATION.get(category, cls.CALIBRATION['general'])
-    
-    @classmethod
-    def get_source_weight(cls, source_type: str) -> float:
-        """Get importance weight for source type."""
-        return cls.SOURCE_TYPE_WEIGHTS.get(source_type, 1.00)
-    
-    @classmethod
-    def apply_calibration(cls, score: float, category: str, source_type: str = None) -> float:
+    def __init__(self, cache_timeout: int = 3600):
         """
-        Apply domain calibration and source type weighting.
+        Initialize with adaptive calibration.
+        
+        Args:
+            cache_timeout: Cache duration in seconds
+        """
+        self.cache_timeout = cache_timeout
+        self.cache_key_calibration = "kb_dynamic_calibration_v1"
+        
+    def get_domain_parameters(self, category: str, force_refresh: bool = False) -> Dict:
+        """
+        Get calibration parameters for a category dynamically.
+        Parameters are computed from actual KB statistics.
+        
+        Args:
+            category: Document category
+            force_refresh: Force recomputation
+        
+        Returns:
+            Calibration parameters {base, spread, boost, confidence}
+        """
+        # Try cache first
+        if not force_refresh:
+            cached = cache.get(self.cache_key_calibration)
+            if cached and category in cached:
+                return cached[category]
+        
+        # Compute calibration parameters
+        all_params = self._compute_all_calibration_parameters()
+        
+        # Cache results
+        cache.set(self.cache_key_calibration, all_params, self.cache_timeout)
+        
+        # Return category-specific params or default
+        return all_params.get(category, all_params.get('_default', self._default_parameters()))
+    
+    def _compute_all_calibration_parameters(self) -> Dict[str, Dict]:
+        """
+        Compute calibration parameters for all categories dynamically.
+        Uses percentile-based statistics from actual KB data.
+        """
+        try:
+            # Get category statistics
+            from .knowledge_weighting import KnowledgeStatisticsEngine
+            stats_engine = KnowledgeStatisticsEngine()
+            
+            category_stats = stats_engine.get_category_statistics()
+            similarity_stats = stats_engine.get_similarity_statistics()
+            
+            all_params = {}
+            
+            for category, cat_info in category_stats.items():
+                # Extract statistics
+                doc_count = cat_info.get('document_count', 0)
+                avg_similarity = cat_info.get('avg_similarity', 0.65)
+                std_similarity = cat_info.get('std_similarity', 0.15)
+                p50_similarity = cat_info.get('p50_similarity', 0.67)
+                
+                # Compute calibration parameters
+                # Base: Use median similarity as baseline
+                base = p50_similarity
+                
+                # Spread: Use std or default
+                spread = max(std_similarity, 0.10)  # Minimum spread
+                
+                # Boost: Based on document frequency (rare categories get boost)
+                total_docs = sum(c.get('document_count', 0) for c in category_stats.values())
+                frequency = doc_count / total_docs if total_docs > 0 else 0.1
+                
+                # Inverse frequency boost (rare = higher importance)
+                if frequency < 0.05:
+                    boost = 1.30  # Very rare
+                elif frequency < 0.10:
+                    boost = 1.20  # Rare
+                elif frequency < 0.20:
+                    boost = 1.10  # Less common
+                else:
+                    boost = 1.00  # Common
+                
+                # Confidence: Based on sample size
+                confidence = min(doc_count / 100.0, 1.0)  # Max at 100+ docs
+                
+                all_params[category] = {
+                    'base': base,
+                    'spread': spread,
+                    'boost': boost,
+                    'confidence': confidence,
+                    'doc_count': doc_count,
+                    'frequency': frequency
+                }
+            
+            # Add global default
+            all_params['_default'] = self._compute_default_from_global(similarity_stats)
+            
+            return all_params
+            
+        except Exception as e:
+            print(f"⚠️ Calibration computation failed: {e}")
+            # Return safe defaults
+            return {'_default': self._default_parameters()}
+    
+    def _compute_default_from_global(self, global_stats: Dict) -> Dict:
+        """Compute default parameters from global statistics."""
+        return {
+            'base': global_stats.get('median', 0.65),
+            'spread': global_stats.get('std', 0.15),
+            'boost': 1.00,
+            'confidence': 0.5,
+            'doc_count': global_stats.get('total_samples', 0),
+            'frequency': 1.0
+        }
+    
+    def _default_parameters(self) -> Dict:
+        """Fallback default parameters."""
+        return {
+            'base': 0.65,
+            'spread': 0.20,
+            'boost': 1.00,
+            'confidence': 0.3,
+            'doc_count': 0,
+            'frequency': 0.0
+        }
+    
+    def apply_calibration(self, score: float, category: str) -> float:
+        """
+        Apply dynamic calibration to a raw score.
         
         Args:
             score: Raw normalized score (0-1)
             category: Document category
-            source_type: Document source type (optional)
         
         Returns:
             Calibrated score (0-1)
         """
-        params = cls.get_parameters(category)
+        params = self.get_domain_parameters(category)
         
-        # Domain calibration
-        calibrated = (score - params['base']) / params['spread']
-        calibrated = 1 / (1 + np.exp(-calibrated))  # Sigmoid to 0-1
+        # Z-score normalization
+        z = (score - params['base']) / params['spread']
         
-        # Apply domain importance boost
+        # Sigmoid transformation
+        calibrated = 1 / (1 + np.exp(-z))
+        
+        # Apply boost
         calibrated *= params['boost']
         
-        # Apply source type weight if available
-        if source_type:
-            source_weight = cls.get_source_weight(source_type)
-            calibrated *= source_weight
-        
         return float(np.clip(calibrated, 0, 1))
+    
+    def clear_cache(self):
+        """Clear calibration cache."""
+        cache.delete(self.cache_key_calibration)
 
+
+# ==================== ADAPTIVE THRESHOLDING ====================
+
+class AdaptiveThresholdEngine:
+    """
+    Adaptive thresholding based on actual KB statistics.
+    Thresholds automatically adjust to data distribution.
+    """
+    
+    def __init__(self, thresholds_config: Optional[Dict] = None):
+        """
+        Initialize with optional custom thresholds.
+        
+        Args:
+            thresholds_config: Override default thresholds
+        """
+        self.custom_thresholds = thresholds_config or {}
+        self.cache_key = "kb_adaptive_thresholds_v1"
+        self.cache_timeout = 3600
+    
+    def get_threshold(self, threshold_name: str, category: Optional[str] = None) -> float:
+        """
+        Get adaptive threshold value.
+        
+        Args:
+            threshold_name: Name of threshold (e.g., 'min_similarity')
+            category: Optional category for category-specific thresholds
+        
+        Returns:
+            Threshold value
+        """
+        # Check custom override
+        if threshold_name in self.custom_thresholds:
+            return self.custom_thresholds[threshold_name]
+        
+        # Get adaptive thresholds from cache or compute
+        thresholds = self._get_adaptive_thresholds()
+        
+        # Category-specific threshold
+        if category and category in thresholds:
+            return thresholds[category].get(threshold_name, thresholds['_global'].get(threshold_name, 0.5))
+        
+        # Global threshold
+        return thresholds['_global'].get(threshold_name, 0.5)
+    
+    def _get_adaptive_thresholds(self) -> Dict:
+        """Get or compute adaptive thresholds."""
+        cached = cache.get(self.cache_key)
+        if cached:
+            return cached
+        
+        thresholds = self._compute_adaptive_thresholds()
+        cache.set(self.cache_key, thresholds, self.cache_timeout)
+        return thresholds
+    
+    def _compute_adaptive_thresholds(self) -> Dict:
+        """
+        Compute adaptive thresholds from KB statistics.
+        Uses percentiles for robustness.
+        """
+        try:
+            from .knowledge_weighting import KnowledgeStatisticsEngine
+            stats_engine = KnowledgeStatisticsEngine()
+            
+            global_stats = stats_engine.get_similarity_statistics()
+            
+            # Compute global thresholds using percentiles
+            global_thresholds = {
+                'min_similarity': global_stats.get('p25', 0.30),  # 25th percentile
+                'moderate_similarity': global_stats.get('p50', 0.50),  # Median
+                'high_similarity': global_stats.get('p75', 0.75),  # 75th percentile
+                'very_high_similarity': global_stats.get('p90', 0.85),  # 90th percentile
+                
+                'low_confidence': 0.30,  # Fixed for now
+                'moderate_confidence': 0.50,
+                'high_confidence': 0.70,
+                
+                'minimal_depth_score': global_stats.get('p25', 0.40),
+                'moderate_depth_score': global_stats.get('p50', 0.60),
+                'substantial_depth_score': global_stats.get('p75', 0.75),
+                'extensive_depth_score': global_stats.get('p90', 0.85),
+            }
+            
+            result = {'_global': global_thresholds}
+            
+            # Category-specific thresholds (optional)
+            category_stats = stats_engine.get_category_statistics()
+            for category, cat_info in category_stats.items():
+                result[category] = {
+                    'min_similarity': cat_info.get('p25_similarity', global_thresholds['min_similarity']),
+                    'high_similarity': cat_info.get('p75_similarity', global_thresholds['high_similarity']),
+                }
+            
+            return result
+            
+        except Exception as e:
+            print(f"⚠️ Threshold computation failed: {e}")
+            return {'_global': self._default_thresholds()}
+    
+    def _default_thresholds(self) -> Dict:
+        """Fallback default thresholds."""
+        return {
+            'min_similarity': 0.30,
+            'moderate_similarity': 0.50,
+            'high_similarity': 0.70,
+            'very_high_similarity': 0.85,
+            'low_confidence': 0.30,
+            'moderate_confidence': 0.50,
+            'high_confidence': 0.70,
+            'minimal_depth_score': 0.40,
+            'moderate_depth_score': 0.60,
+            'substantial_depth_score': 0.75,
+            'extensive_depth_score': 0.85,
+        }
+    
+    def assess_knowledge_depth(
+        self, 
+        avg_score: float, 
+        num_docs: int, 
+        category: Optional[str] = None
+    ) -> str:
+        """
+        Assess knowledge depth using adaptive thresholds.
+        
+        Returns: 'extensive', 'substantial', 'moderate', 'limited', 'minimal', or 'none'
+        """
+        if num_docs == 0:
+            return 'none'
+        
+        # Get adaptive thresholds
+        extensive_thresh = self.get_threshold('extensive_depth_score', category)
+        substantial_thresh = self.get_threshold('substantial_depth_score', category)
+        moderate_thresh = self.get_threshold('moderate_depth_score', category)
+        minimal_thresh = self.get_threshold('minimal_depth_score', category)
+        
+        # Assess based on score + quantity
+        if avg_score >= extensive_thresh and num_docs >= 7:
+            return 'extensive'
+        elif avg_score >= substantial_thresh and num_docs >= 5:
+            return 'substantial'
+        elif avg_score >= moderate_thresh and num_docs >= 3:
+            return 'moderate'
+        elif avg_score >= minimal_thresh or num_docs >= 2:
+            return 'limited'
+        else:
+            return 'minimal'
+    
+    def clear_cache(self):
+        """Clear threshold cache."""
+        cache.delete(self.cache_key)
+
+
+# ==================== KNOWLEDGE STATISTICS ENGINE ====================
+
+class KnowledgeStatisticsEngine:
+    """
+    Enhanced statistics sampling with random vector queries.
+    Provides accurate KB distribution metrics.
+    """
+    
+    def __init__(self, namespace: Optional[str] = None):
+        """
+        Initialize statistics engine.
+        
+        Args:
+            namespace: Pinecone namespace
+        """
+        self.namespace = namespace
+        self.index_name = INDEX_NAME
+        self.cache_timeout = 3600
+        self.cache_key_category = "kb_category_stats_v3"
+        self.cache_key_similarity = "kb_similarity_stats_v3"
+    
+    def get_category_statistics(self, force_refresh: bool = False) -> Dict[str, Dict]:
+        """Get category distribution statistics with enhanced sampling."""
+        if not force_refresh:
+            cached = cache.get(self.cache_key_category)
+            if cached:
+                return cached
+        
+        stats = self._sample_category_statistics()
+        cache.set(self.cache_key_category, stats, self.cache_timeout)
+        return stats
+    
+    def get_similarity_statistics(self, force_refresh: bool = False) -> Dict:
+        """Get global similarity distribution statistics."""
+        if not force_refresh:
+            cached = cache.get(self.cache_key_similarity)
+            if cached:
+                return cached
+        
+        stats = self._sample_similarity_distribution()
+        cache.set(self.cache_key_similarity, stats, self.cache_timeout)
+        return stats
+    
+    def _sample_category_statistics(self, sample_size: int = 300) -> Dict[str, Dict]:
+        """Sample KB to estimate category distribution."""
+        try:
+            # FIXED: Use helper function for langchain_community
+            vector_store = get_pinecone_vectorstore(self.index_name, self.namespace)
+            
+            # Diverse sample queries for broad coverage
+            sample_queries = [
+                "learning education study",
+                "analysis research methodology",
+                "development implementation practice",
+                "theory concepts fundamentals",
+                "application practical examples",
+                "advanced specialized topics",
+                "introduction basics overview",
+                "technical professional academic"
+            ]
+            
+            category_data = defaultdict(lambda: {
+                'document_count': 0,
+                'similarities': [],
+                'complexities': []
+            })
+            
+            docs_per_query = sample_size // len(sample_queries)
+            
+            for query in sample_queries:
+                try:
+                    results = vector_store.similarity_search_with_score(
+                        query=query,
+                        k=docs_per_query
+                    )
+                    
+                    for doc, score in results:
+                        meta = SchemaHandler.standardize_metadata(doc.metadata)
+                        category = meta['category']
+                        
+                        category_data[category]['document_count'] += 1
+                        category_data[category]['similarities'].append(score)
+                        
+                        if meta['complexity'] > 0:
+                            category_data[category]['complexities'].append(meta['complexity'])
+                
+                except Exception as e:
+                    print(f"⚠️ Query sampling failed: {e}")
+                    continue
+            
+            # Compute statistics per category
+            stats = {}
+            for category, data in category_data.items():
+                sims = data['similarities']
+                if sims:
+                    stats[category] = {
+                        'document_count': data['document_count'],
+                        'avg_similarity': float(np.mean(sims)),
+                        'std_similarity': float(np.std(sims)),
+                        'p25_similarity': float(np.percentile(sims, 25)),
+                        'p50_similarity': float(np.percentile(sims, 50)),
+                        'p75_similarity': float(np.percentile(sims, 75)),
+                        'p90_similarity': float(np.percentile(sims, 90)),
+                        'avg_complexity': float(np.mean(data['complexities'])) if data['complexities'] else 5.0
+                    }
+            
+            return stats if stats else self._default_category_stats()
+            
+        except Exception as e:
+            print(f"❌ Category statistics sampling failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._default_category_stats()
+    
+    def _sample_similarity_distribution(self, sample_size: int = 500) -> Dict:
+        """Sample similarity distribution for global statistics."""
+        try:
+            # FIXED: Use helper function for langchain_community
+            vector_store = get_pinecone_vectorstore(self.index_name, self.namespace)
+            
+            all_similarities = []
+            
+            # Random diverse queries
+            random_queries = [
+                "study", "learn", "analyze", "understand", "develop",
+                "research", "examine", "investigate", "explore", "discover"
+            ]
+            
+            random.shuffle(random_queries)
+            
+            for query in random_queries[:5]:
+                try:
+                    results = vector_store.similarity_search_with_score(
+                        query=query,
+                        k=100
+                    )
+                    
+                    all_similarities.extend([score for _, score in results])
+                
+                except Exception as e:
+                    print(f"⚠️ Similarity sampling failed: {e}")
+                    continue
+            
+            if not all_similarities:
+                return self._default_similarity_stats()
+            
+            return {
+                'total_samples': len(all_similarities),
+                'mean': float(np.mean(all_similarities)),
+                'std': float(np.std(all_similarities)),
+                'median': float(np.median(all_similarities)),
+                'p25': float(np.percentile(all_similarities, 25)),
+                'p50': float(np.percentile(all_similarities, 50)),
+                'p75': float(np.percentile(all_similarities, 75)),
+                'p90': float(np.percentile(all_similarities, 90)),
+                'p95': float(np.percentile(all_similarities, 95)),
+                'min': float(np.min(all_similarities)),
+                'max': float(np.max(all_similarities))
+            }
+            
+        except Exception as e:
+            print(f"❌ Similarity distribution sampling failed: {e}")
+            return self._default_similarity_stats()
+    
+    def _default_category_stats(self) -> Dict:
+        """Fallback category statistics."""
+        defaults = {}
+        for cat in ['mathematics', 'data_science', 'programming', 'science', 'business', 'finance', 'general']:
+            defaults[cat] = {
+                'document_count': 100,
+                'avg_similarity': 0.65,
+                'std_similarity': 0.15,
+                'p25_similarity': 0.55,
+                'p50_similarity': 0.67,
+                'p75_similarity': 0.78,
+                'p90_similarity': 0.85,
+                'avg_complexity': 5.0
+            }
+        return defaults
+    
+    def _default_similarity_stats(self) -> Dict:
+        """Fallback similarity statistics."""
+        return {
+            'total_samples': 0,
+            'mean': 0.65,
+            'std': 0.15,
+            'median': 0.67,
+            'p25': 0.55,
+            'p50': 0.67,
+            'p75': 0.78,
+            'p90': 0.85,
+            'p95': 0.90,
+            'min': 0.30,
+            'max': 0.95
+        }
+    
+    def clear_cache(self):
+        """Clear all statistics caches."""
+        cache.delete(self.cache_key_category)
+        cache.delete(self.cache_key_similarity)
+
+
+# ==================== MAIN KNOWLEDGE GROUNDING ENGINE ====================
 
 class KnowledgeGroundingEngine:
     """
-    Production-ready knowledge grounding engine with:
-    - Flexible schema handling
-    - Robust fallbacks
-    - Domain calibration
-    - Cache management
-    - Comprehensive error handling
+    Production-ready knowledge grounding with dynamic systems.
+    FIXED for langchain_community.vectorstores.Pinecone
     """
     
-    # Cache configuration
-    CACHE_KEY_CATEGORY_STATS = "kb_category_stats_v2"
-    CACHE_KEY_GLOBAL_STATS = "kb_global_stats_v2"
-    CACHE_KEY_SOURCE_DIST = "kb_source_distribution_v2"
-    CACHE_TIMEOUT = 3600  # 1 hour
-    
-    def __init__(self, namespace: Optional[str] = None, use_cache: bool = True):
+    def __init__(
+        self, 
+        namespace: Optional[str] = None, 
+        use_cache: bool = True,
+        thresholds_config: Optional[Dict] = None
+    ):
         """
-        Initialize knowledge grounding engine.
+        Initialize engine with dynamic systems.
         
         Args:
-            namespace: Pinecone namespace for knowledge base separation
-            use_cache: Enable Django cache for statistics
+            namespace: Pinecone namespace
+            use_cache: Enable caching
+            thresholds_config: Custom threshold overrides
         """
-        self.vector_store = PineconeVectorStore(
-            index_name=INDEX_NAME,
-            embedding=embeddings,
-            namespace=namespace,
-            pinecone_api_key=os.getenv("PINECONE_API_KEY")
-        )
+        # FIXED: Use helper function for langchain_community
+        self.index_name = INDEX_NAME
         self.namespace = namespace
+        self.vector_store = get_pinecone_vectorstore(self.index_name, namespace)
         self.use_cache = use_cache
-        self.schema_handler = SchemaHandler()
-        self.domain_calibration = DomainCalibration()
         
-        print(f"🔍 Knowledge Grounding Engine initialized")
+        # Initialize dynamic systems
+        self.schema_handler = SchemaHandler()
+        self.calibration_engine = DynamicCalibrationEngine()
+        self.threshold_engine = AdaptiveThresholdEngine(thresholds_config)
+        self.stats_engine = KnowledgeStatisticsEngine(namespace)
+        
+        print(f"🔍 Knowledge Grounding Engine initialized (Dynamic Mode)")
         print(f"   Namespace: {namespace or 'default'}")
         print(f"   Cache: {'enabled' if use_cache else 'disabled'}")
+        print(f"   Dynamic Calibration: ✓")
+        print(f"   Adaptive Thresholds: ✓")
     
     def compute_knowledge_relevance(
         self, 
         text: str, 
         metadata: Dict,
         top_k: int = 10,
-        category_aware: bool = True,
-        min_score_threshold: float = 0.3
+        category_aware: bool = True
     ) -> Dict:
         """
-        Compute knowledge-grounded relevance score with full error handling.
+        Compute knowledge-grounded relevance with dynamic systems.
         
         Args:
             text: Content to analyze
             metadata: Document metadata (flexible schema)
-            top_k: Number of similar documents to retrieve
+            top_k: Number of similar documents
             category_aware: Use category-aware normalization
-            min_score_threshold: Minimum similarity to consider
         
         Returns:
-            Comprehensive relevance assessment with confidence scores
+            Comprehensive relevance assessment
         """
         try:
             # Validate input
             if not text or len(text) < 20:
-                print("⚠️ Text too short for knowledge grounding")
+                print("⚠️ Text too short for KB grounding")
                 return self._default_score("insufficient_text")
             
-            # Standardize metadata schema
+            # Standardize metadata
             std_metadata = self.schema_handler.standardize_metadata(metadata)
+            category = std_metadata['category']
             
-            print(f"   Querying KB for: {std_metadata['topic'][:50]}...")
-            print(f"   Category: {std_metadata['category']}, Source: {std_metadata['source_type']}")
+            print(f"   Querying KB: {std_metadata['topic'][:50]}...")
+            print(f"   Category: {category}")
+            
+            # Get adaptive threshold
+            min_threshold = self.threshold_engine.get_threshold('min_similarity', category)
             
             # Query knowledge base
             similar_docs = self._safe_vector_search(
                 text=text,
-                std_metadata=std_metadata,
+                category=category,
                 top_k=top_k,
-                min_threshold=min_score_threshold
+                min_threshold=min_threshold
             )
             
             if not similar_docs:
-                print("   No similar documents found in KB")
+                print("   No similar documents found")
                 return self._default_score("no_matches")
             
-            print(f"   Found {len(similar_docs)} similar documents")
+            print(f"   Found {len(similar_docs)} documents")
             
-            # Extract and standardize metadata from results
+            # Process results
             processed_docs = []
             for doc, score in similar_docs:
-                std_doc_meta = self.schema_handler.standardize_metadata(doc.metadata)
-                processed_docs.append((std_doc_meta, score))
+                doc_meta = self.schema_handler.standardize_metadata(doc.metadata)
+                processed_docs.append((doc_meta, score))
             
-            # Compute relevance scores
-            relevance_result = self._compute_relevance_scores(
+            # Compute relevance
+            result = self._compute_relevance_scores(
                 processed_docs=processed_docs,
-                target_metadata=std_metadata,
+                target_category=category,
                 category_aware=category_aware
             )
             
-            # Add context and insights
-            relevance_result['context'] = self._extract_rich_context(
-                processed_docs=processed_docs,
-                target_metadata=std_metadata
-            )
+            # Add context
+            result['context'] = self._extract_context(processed_docs, std_metadata)
+            result['target_category'] = category
+            result['timestamp'] = datetime.now().isoformat()
             
-            # Add metadata
-            relevance_result['target_category'] = std_metadata['category']
-            relevance_result['target_source_type'] = std_metadata['source_type']
-            relevance_result['timestamp'] = datetime.now().isoformat()
+            print(f"   ✅ KR: {result['knowledge_relevance_score']:.3f} (conf: {result['confidence']:.3f})")
             
-            print(f"   ✅ KR Score: {relevance_result['knowledge_relevance_score']:.3f} "
-                  f"(conf: {relevance_result['confidence']:.3f})")
-            
-            return relevance_result
+            return result
             
         except Exception as e:
-            print(f"❌ Knowledge grounding failed: {e}")
+            print(f"❌ KB grounding failed: {e}")
             import traceback
             traceback.print_exc()
             return self._default_score("error", error=str(e))
@@ -489,22 +1193,16 @@ class KnowledgeGroundingEngine:
     def _safe_vector_search(
         self,
         text: str,
-        std_metadata: Dict,
+        category: str,
         top_k: int,
         min_threshold: float
     ) -> List[Tuple]:
-        """
-        Safe vector search with error handling and filtering.
-        """
+        """Safe vector search with filtering."""
         try:
-            # Build filter if category-aware
-            search_filter = self._build_smart_filter(std_metadata)
-            
             # Execute search
             results = self.vector_store.similarity_search_with_score(
                 query=text,
-                k=top_k * 2,  # Fetch more for filtering
-                filter=search_filter
+                k=top_k * 2  # Fetch extra for filtering
             )
             
             # Filter by threshold
@@ -520,78 +1218,49 @@ class KnowledgeGroundingEngine:
             print(f"⚠️ Vector search failed: {e}")
             return []
     
-    def _build_smart_filter(self, std_metadata: Dict) -> Optional[Dict]:
-        """
-        Build intelligent filter for vector search.
-        
-        Strategy:
-        - If exam_prep: prioritize same category + exam materials
-        - If research: allow broader search
-        - Default: no filter for maximum coverage
-        """
-        category = std_metadata['category']
-        source_type = std_metadata['source_type']
-        
-        # High-priority categories get stricter filtering
-        if category == 'exam_prep':
-            return {
-                "$or": [
-                    {"category": {"$eq": category}},
-                    {"source_type": {"$eq": "exam_material"}}
-                ]
-            }
-        
-        # For now, use broad search to maximize knowledge coverage
-        # Can be refined based on your requirements
-        return None
-    
     def _compute_relevance_scores(
         self,
         processed_docs: List[Tuple[Dict, float]],
-        target_metadata: Dict,
+        target_category: str,
         category_aware: bool
     ) -> Dict:
-        """
-        Compute comprehensive relevance scores with normalization.
-        """
+        """Compute comprehensive relevance scores with dynamic calibration."""
         if not processed_docs:
             return self._default_score("no_matches")
         
-        # Extract scores and categories
+        # Extract data
         raw_scores = [score for _, score in processed_docs]
         categories = [meta['category'] for meta, _ in processed_docs]
-        source_types = [meta['source_type'] for meta, _ in processed_docs]
         
         # Normalize scores
         if category_aware:
             normalized_score = self._normalize_with_category_context(
                 scores=raw_scores,
                 categories=categories,
-                target_category=target_metadata['category']
+                target_category=target_category
             )
         else:
             normalized_score = self._normalize_global(raw_scores)
         
-        # Apply domain calibration
-        calibrated_score = self.domain_calibration.apply_calibration(
+        # Apply dynamic calibration
+        calibrated_score = self.calibration_engine.apply_calibration(
             score=normalized_score,
-            category=target_metadata['category'],
-            source_type=target_metadata['source_type']
+            category=target_category
         )
         
         # Calculate confidence
         confidence = self._calculate_confidence(
             scores=raw_scores,
             categories=categories,
-            num_docs=len(processed_docs),
-            target_category=target_metadata['category']
+            target_category=target_category
         )
         
-        # Knowledge depth assessment
-        knowledge_depth = self._assess_knowledge_depth(
-            scores=raw_scores,
-            categories=categories,
-            source_types=source_types
+        # Assess knowledge depth using adaptive thresholds
+        avg_score = np.mean(raw_scores)
+        knowledge_depth = self.threshold_engine.assess_knowledge_depth(
+            avg_score=avg_score,
+            num_docs=len(processed_docs),
+            category=target_category
         )
         
         return {
@@ -604,9 +1273,7 @@ class KnowledgeGroundingEngine:
             "mean_similarity": round(np.mean(raw_scores), 4),
             "median_similarity": round(np.median(raw_scores), 4),
             "category_coverage": len(set(categories)),
-            "source_type_coverage": len(set(source_types)),
-            "dominant_kb_category": max(set(categories), key=categories.count),
-            "dominant_kb_source": max(set(source_types), key=source_types.count),
+            "dominant_kb_category": max(set(categories), key=categories.count) if categories else "unknown",
             "raw_scores": [round(s, 4) for s in raw_scores[:3]]
         }
     
@@ -616,22 +1283,26 @@ class KnowledgeGroundingEngine:
         categories: List[str],
         target_category: str
     ) -> float:
-        """
-        Category-aware normalization with inverse frequency weighting.
-        """
+        """Category-aware normalization with inverse frequency weighting."""
         if not scores:
             return 0.5
         
-        # Get category statistics
-        category_stats = self._get_category_stats()
-        total_docs = sum(category_stats.values()) or 1
+        # Get dynamic category statistics
+        category_stats = self.stats_engine.get_category_statistics()
         
-        # Calculate IDF-style weights
+        # Calculate total documents
+        total_docs = sum(cat_info.get('document_count', 0) for cat_info in category_stats.values())
+        if total_docs == 0:
+            total_docs = 1000  # Fallback
+        
+        # Calculate weighted scores
         weighted_scores = []
         for score, cat in zip(scores, categories):
-            # Inverse frequency weight
-            cat_frequency = category_stats.get(cat, 1) / total_docs
-            idf_weight = np.log((total_docs + 1) / (category_stats.get(cat, 1) + 1)) + 1
+            cat_info = category_stats.get(cat, {})
+            cat_count = cat_info.get('document_count', 100)
+            
+            # Inverse document frequency weight
+            idf_weight = np.log((total_docs + 1) / (cat_count + 1)) + 1
             
             # Category match bonus
             category_bonus = 1.5 if cat == target_category else 1.0
@@ -643,40 +1314,44 @@ class KnowledgeGroundingEngine:
         if not weighted_scores:
             return 0.5
         
-        # Robust percentile-based normalization
+        # Percentile-based normalization for robustness
         sorted_scores = sorted(weighted_scores)
         n = len(sorted_scores)
         
         if n == 1:
             return float(np.clip(sorted_scores[0], 0, 1))
         
-        # Use adaptive scaling
+        # Adaptive scaling using percentiles
         median = np.median(sorted_scores)
         p75 = np.percentile(sorted_scores, 75)
         p90 = np.percentile(sorted_scores, 90)
         max_score = max(sorted_scores)
         
-        # Scale to 0-1
+        # Multi-scale normalization
         if max_score <= median:
             normalized = 0.5
         elif median < max_score <= p75:
             normalized = 0.5 + (max_score - median) / (p75 - median + 0.01) * 0.25
-        else:
+        elif p75 < max_score <= p90:
             normalized = 0.75 + (max_score - p75) / (p90 - p75 + 0.01) * 0.15
+        else:
+            normalized = 0.9 + (max_score - p90) / (max(sorted_scores) - p90 + 0.01) * 0.1
         
         return float(np.clip(normalized, 0, 1))
     
     def _normalize_global(self, scores: List[float]) -> float:
-        """Global normalization using z-score and sigmoid."""
+        """Global normalization using adaptive statistics."""
         if not scores:
             return 0.5
         
-        global_stats = self._get_global_stats()
+        # Get dynamic global statistics
+        global_stats = self.stats_engine.get_similarity_statistics()
         
         max_score = max(scores)
-        global_mean = global_stats['mean']
-        global_std = global_stats['std']
+        global_mean = global_stats.get('mean', 0.65)
+        global_std = global_stats.get('std', 0.15)
         
+        # Z-score normalization with sigmoid
         if global_std > 0:
             z_score = (max_score - global_mean) / global_std
             normalized = 1 / (1 + np.exp(-z_score))
@@ -689,17 +1364,15 @@ class KnowledgeGroundingEngine:
         self,
         scores: List[float],
         categories: List[str],
-        num_docs: int,
         target_category: str
     ) -> float:
-        """
-        Calculate confidence in relevance score.
-        """
+        """Calculate confidence in relevance score."""
         if not scores:
             return 0.0
         
         # Factor 1: Document quantity
-        doc_factor = min(num_docs / 10.0, 1.0) ** 0.7
+        doc_count = len(scores)
+        doc_factor = min(doc_count / 10.0, 1.0) ** 0.7
         
         # Factor 2: Score quality
         mean_score = np.mean(scores)
@@ -716,59 +1389,30 @@ class KnowledgeGroundingEngine:
         same_category_count = sum(1 for cat in categories if cat == target_category)
         category_factor = same_category_count / len(categories) if categories else 0
         
+        # Factor 5: Score distribution quality
+        if len(scores) >= 3:
+            score_range = max(scores) - min(scores)
+            distribution_factor = 1 - min(score_range / 0.5, 1.0)
+        else:
+            distribution_factor = 0.5
+        
         # Weighted combination
         confidence = (
-            0.25 * doc_factor +
-            0.35 * score_factor +
+            0.20 * doc_factor +
+            0.30 * score_factor +
             0.20 * consistency_factor +
-            0.20 * category_factor
+            0.20 * category_factor +
+            0.10 * distribution_factor
         )
         
         return float(np.clip(confidence, 0, 1))
     
-    def _assess_knowledge_depth(
-        self,
-        scores: List[float],
-        categories: List[str],
-        source_types: List[str]
-    ) -> str:
-        """
-        Assess depth of knowledge coverage in KB.
-        """
-        if not scores:
-            return "none"
-        
-        avg_score = np.mean(scores)
-        num_docs = len(scores)
-        num_categories = len(set(categories))
-        num_sources = len(set(source_types))
-        
-        # Quality + quantity assessment
-        if avg_score >= 0.80 and num_docs >= 7:
-            depth = "extensive"
-        elif avg_score >= 0.70 and num_docs >= 5:
-            depth = "substantial"
-        elif avg_score >= 0.60 and num_docs >= 3:
-            depth = "moderate"
-        elif avg_score >= 0.50 and num_docs >= 2:
-            depth = "limited"
-        else:
-            depth = "minimal"
-        
-        # Add breadth indicator
-        if num_categories >= 3 or num_sources >= 3:
-            depth += "_broad"
-        
-        return depth
-    
-    def _extract_rich_context(
+    def _extract_context(
         self,
         processed_docs: List[Tuple[Dict, float]],
         target_metadata: Dict
     ) -> Dict:
-        """
-        Extract comprehensive contextual insights.
-        """
+        """Extract rich contextual insights from similar documents."""
         if not processed_docs:
             return {"note": "No context available"}
         
@@ -778,7 +1422,7 @@ class KnowledgeGroundingEngine:
         topics = defaultdict(int)
         complexities = []
         files = []
-        scores = []
+        scores = [score for _, score in processed_docs]
         
         for meta, score in processed_docs:
             categories[meta['category']] += 1
@@ -790,20 +1434,19 @@ class KnowledgeGroundingEngine:
             
             if meta['file'] != 'unknown':
                 files.append(meta['file'])
-            
-            scores.append(score)
         
-        # Build context
+        # Build comprehensive context
         context = {
             "category_distribution": dict(categories),
             "source_type_distribution": dict(source_types),
-            "dominant_category": max(categories, key=categories.get),
-            "dominant_source_type": max(source_types, key=source_types.get),
+            "dominant_category": max(categories, key=categories.get) if categories else "unknown",
+            "dominant_source_type": max(source_types, key=source_types.get) if source_types else "unknown",
             "top_topics": dict(sorted(topics.items(), key=lambda x: x[1], reverse=True)[:5]),
             "complexity_stats": {
                 "avg": round(np.mean(complexities), 2) if complexities else None,
                 "min": min(complexities) if complexities else None,
-                "max": max(complexities) if complexities else None
+                "max": max(complexities) if complexities else None,
+                "median": round(np.median(complexities), 2) if complexities else None
             },
             "similarity_distribution": {
                 "very_high (≥0.8)": sum(1 for s in scores if s >= 0.8),
@@ -812,177 +1455,57 @@ class KnowledgeGroundingEngine:
                 "low (0.5-0.6)": sum(1 for s in scores if 0.5 <= s < 0.6),
                 "very_low (<0.5)": sum(1 for s in scores if s < 0.5)
             },
-            "top_similar_sources": list(set(files))[:5]
+            "top_similar_sources": list(set(files))[:5],
+            "coverage_metrics": {
+                "unique_categories": len(categories),
+                "unique_source_types": len(source_types),
+                "unique_topics": len(topics)
+            }
         }
         
-        # Add interpretation
+        # Add intelligent interpretation
         target_complexity = target_metadata['complexity']
         if complexities:
             kb_avg_complexity = np.mean(complexities)
+            complexity_diff = target_complexity - kb_avg_complexity
             
-            if target_complexity > kb_avg_complexity + 2:
+            if complexity_diff > 2:
                 context['interpretation'] = (
-                    f"This material (complexity {target_complexity}) is significantly more advanced "
+                    f"This material (complexity {target_complexity}) is more advanced "
                     f"than similar KB content (avg {kb_avg_complexity:.1f}). "
-                    f"Consider as high-priority foundational learning."
+                    f"Represents opportunity for advanced learning or knowledge gap."
                 )
-            elif target_complexity < kb_avg_complexity - 2:
+            elif complexity_diff < -2:
                 context['interpretation'] = (
                     f"This material (complexity {target_complexity}) is more introductory "
                     f"than KB content (avg {kb_avg_complexity:.1f}). "
-                    f"Good for review or building prerequisites."
+                    f"Good for building prerequisites or review."
                 )
             else:
                 context['interpretation'] = (
-                    f"Complexity ({target_complexity}) aligns well with KB (avg {kb_avg_complexity:.1f}). "
-                    f"Standard priority relative to knowledge base."
+                    f"Complexity ({target_complexity}) aligns with KB (avg {kb_avg_complexity:.1f}). "
+                    f"Standard priority relative to existing knowledge."
                 )
         
-        # Source type recommendation
+        # Source type recommendations
         target_source = target_metadata['source_type']
         dominant_source = context['dominant_source_type']
         
         if target_source == 'assignment' and dominant_source in ['textbook', 'course_material']:
-            context['source_recommendation'] = (
-                "Assignment related to covered course materials. Practice opportunity."
-            )
-        elif target_source == 'exam_material':
-            context['source_recommendation'] = (
-                "Exam preparation - critical priority regardless of KB coverage."
-            )
+            context['recommendation'] = "Assignment complements existing course materials. Practice opportunity."
+        elif target_source == 'exam_prep':
+            context['recommendation'] = "Exam preparation material. Critical priority for assessment readiness."
         elif target_source == 'research_paper' and dominant_source == 'textbook':
-            context['source_recommendation'] = (
-                "Research paper extends textbook knowledge. Opportunity for deeper learning."
-            )
+            context['recommendation'] = "Research extends textbook foundations. Advanced learning opportunity."
         elif target_source == 'textbook' and dominant_source == 'research_paper':
-            context['source_recommendation'] = (
-                "Textbook provides foundational context for research topics. Essential prerequisite."
-            )
+            context['recommendation'] = "Textbook provides foundational context. Essential prerequisite material."
         else:
-            context['source_recommendation'] = f"Standard {target_source} material."
+            context['recommendation'] = f"Standard {target_source} material with good KB coverage."
         
         return context
     
-    def _get_category_stats(self) -> Dict[str, int]:
-        """
-        Get category distribution statistics with caching.
-        """
-        if self.use_cache:
-            cached = cache.get(self.CACHE_KEY_CATEGORY_STATS)
-            if cached:
-                return cached
-        
-        try:
-            # Query Pinecone index statistics
-            pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-            index = pc.Index(INDEX_NAME)
-            stats = index.describe_index_stats()
-            
-            # Sample-based estimation
-            category_counts = self._sample_category_distribution(sample_size=200)
-            
-            if self.use_cache and category_counts:
-                cache.set(self.CACHE_KEY_CATEGORY_STATS, category_counts, self.CACHE_TIMEOUT)
-            
-            return category_counts if category_counts else self._default_category_distribution()
-            
-        except Exception as e:
-            print(f"⚠️ Could not fetch category stats: {e}")
-            return self._default_category_distribution()
-    
-    def _sample_category_distribution(self, sample_size: int = 200) -> Dict[str, int]:
-        """
-        Sample knowledge base to estimate category distribution.
-        """
-        try:
-            sample_queries = [
-                "learning study education",
-                "mathematics analysis calculation",
-                "programming code software",
-                "data science machine learning",
-                "research paper study",
-                "business management strategy",
-                "finance economics accounting",
-                "science physics chemistry"
-            ]
-            
-            category_counts = defaultdict(int)
-            
-            for query in sample_queries[:4]:  # Limit for performance
-                try:
-                    results = self.vector_store.similarity_search(
-                        query=query,
-                        k=25
-                    )
-                    
-                    for doc in results:
-                        std_meta = self.schema_handler.standardize_metadata(doc.metadata)
-                        category_counts[std_meta['category']] += 1
-                
-                except Exception as e:
-                    print(f"⚠️ Sample query failed: {e}")
-                    continue
-            
-            if not category_counts:
-                return {}
-            
-            # Normalize to represent proportions
-            total = sum(category_counts.values())
-            normalized = {
-                cat: max(int((count / total) * 1000), 1)  # Scale to 1000
-                for cat, count in category_counts.items()
-            }
-            
-            return normalized
-            
-        except Exception as e:
-            print(f"⚠️ Sampling failed: {e}")
-            return {}
-    
-    def _default_category_distribution(self) -> Dict[str, int]:
-        """Fallback category distribution."""
-        return {
-            'mathematics': 150,
-            'data_science': 120,
-            'programming': 130,
-            'science': 110,
-            'business': 90,
-            'finance': 80,
-            'exam_prep': 100,
-            'research': 70,
-            'general': 150
-        }
-    
-    def _get_global_stats(self) -> Dict[str, float]:
-        """
-        Get global similarity statistics.
-        """
-        if self.use_cache:
-            cached = cache.get(self.CACHE_KEY_GLOBAL_STATS)
-            if cached:
-                return cached
-        
-        # Empirical values - can be updated via maintenance task
-        global_stats = {
-            'mean': 0.65,
-            'std': 0.15,
-            'median': 0.67,
-            'p25': 0.55,
-            'p75': 0.78,
-            'p90': 0.85,
-            'min': 0.30,
-            'max': 0.95
-        }
-        
-        if self.use_cache:
-            cache.set(self.CACHE_KEY_GLOBAL_STATS, global_stats, self.CACHE_TIMEOUT)
-        
-        return global_stats
-    
     def _default_score(self, reason: str = "unknown", error: str = None) -> Dict:
-        """
-        Robust default score with reason tracking.
-        """
+        """Robust default score with reason tracking."""
         return {
             "knowledge_relevance_score": 0.50,
             "normalized_score": 0.50,
@@ -993,11 +1516,7 @@ class KnowledgeGroundingEngine:
             "mean_similarity": 0.0,
             "median_similarity": 0.0,
             "category_coverage": 0,
-            "source_type_coverage": 0,
-            "target_category": "unknown",
-            "target_source_type": "unknown",
             "dominant_kb_category": "unknown",
-            "dominant_kb_source": "unknown",
             "context": {
                 "reason": reason,
                 "error": error,
@@ -1013,14 +1532,13 @@ class KnowledgeGroundingEngine:
         top_k: int = 10,
         category_aware: bool = True
     ) -> List[Dict]:
-        """
-        Batch processing for multiple documents.
-        """
+        """Batch processing for multiple documents with progress tracking."""
         print(f"📊 Batch processing {len(documents)} documents...")
         
         results = []
         for idx, doc in enumerate(documents, 1):
-            print(f"   [{idx}/{len(documents)}] Processing...")
+            if idx % 10 == 0:
+                print(f"   Progress: {idx}/{len(documents)}")
             
             text = doc.get('text', '')
             metadata = doc.get('metadata', {})
@@ -1037,79 +1555,114 @@ class KnowledgeGroundingEngine:
                 'knowledge_grounding': relevance
             })
         
-        print(f"✅ Batch complete")
+        print(f"✅ Batch complete: {len(results)} documents processed")
         return results
     
-    def refresh_cache(self):
-        """
-        Force refresh of all cached statistics.
-        Call this after ingesting new document batches.
-        """
-        print("🔄 Refreshing knowledge base statistics cache...")
+    def refresh_all_caches(self):
+        """Force refresh of all caches in the system."""
+        print("🔄 Refreshing all knowledge base caches...")
         
-        # Clear all cache keys
-        cache.delete(self.CACHE_KEY_CATEGORY_STATS)
-        cache.delete(self.CACHE_KEY_GLOBAL_STATS)
-        cache.delete(self.CACHE_KEY_SOURCE_DIST)
+        # Refresh calibration
+        self.calibration_engine.clear_cache()
         
-        # Force recomputation
-        self._get_category_stats()
-        self._get_global_stats()
+        # Refresh thresholds
+        self.threshold_engine.clear_cache()
         
-        print("✅ Cache refreshed")
+        # Refresh statistics
+        self.stats_engine.clear_cache()
+        
+        # Refresh category system
+        SchemaHandler.refresh_category_system()
+        
+        print("✅ All caches refreshed")
     
-    def get_statistics_summary(self) -> Dict:
-        """
-        Get comprehensive statistics summary for monitoring.
-        """
-        category_stats = self._get_category_stats()
-        global_stats = self._get_global_stats()
-        
-        return {
-            "category_distribution": category_stats,
-            "global_similarity_stats": global_stats,
-            "total_categories": len(category_stats),
-            "most_common_category": max(category_stats, key=category_stats.get) if category_stats else "unknown",
-            "least_common_category": min(category_stats, key=category_stats.get) if category_stats else "unknown",
-            "cache_enabled": self.use_cache,
-            "namespace": self.namespace or "default",
-            "calibration_domains": list(self.domain_calibration.CALIBRATION.keys()),
-            "timestamp": datetime.now().isoformat()
-        }
+    def get_system_status(self) -> Dict:
+        """Get comprehensive system status and statistics."""
+        try:
+            # Category statistics
+            category_stats = self.stats_engine.get_category_statistics()
+            
+            # Similarity statistics
+            similarity_stats = self.stats_engine.get_similarity_statistics()
+            
+            # Category system info
+            all_categories = SchemaHandler.get_all_discovered_categories()
+            
+            # Calibration info
+            sample_calibration = self.calibration_engine.get_domain_parameters('mathematics')
+            
+            # Threshold info
+            sample_threshold = self.threshold_engine.get_threshold('min_similarity')
+            
+            return {
+                "status": "operational",
+                "timestamp": datetime.now().isoformat(),
+                "category_system": {
+                    "total_categories": len(all_categories),
+                    "categories": all_categories[:10],  # Sample
+                    "dynamic_learning": True
+                },
+                "statistics": {
+                    "categories_tracked": len(category_stats),
+                    "total_samples": similarity_stats.get('total_samples', 0),
+                    "mean_similarity": similarity_stats.get('mean', 0),
+                    "std_similarity": similarity_stats.get('std', 0)
+                },
+                "calibration": {
+                    "dynamic": True,
+                    "sample_params": sample_calibration
+                },
+                "thresholds": {
+                    "adaptive": True,
+                    "sample_threshold": sample_threshold
+                },
+                "cache_status": {
+                    "enabled": self.use_cache,
+                    "namespace": self.namespace or "default"
+                }
+            }
+            
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
 
 
-# ==================== INTEGRATION HELPER ====================
+# ==================== INTEGRATION HELPERS ====================
 
 def enhance_task_with_knowledge(
     task_analysis: Dict,
     text_content: str,
     blend_weight: float = 0.3,
     min_confidence: float = 0.3,
-    enable_knowledge_boost: bool = True
+    enable_knowledge_boost: bool = True,
+    thresholds_config: Optional[Dict] = None
 ) -> Dict:
     """
     Main integration point: Enhance task analysis with knowledge grounding.
     
-    This function:
-    1. Computes knowledge-grounded relevance
-    2. Blends it with original analysis
-    3. Provides reasoning context for LLM
-    
     Args:
-        task_analysis: Existing task analysis dict
-        text_content: Document content for KB comparison
-        blend_weight: Weight for knowledge influence (0-1)
-        min_confidence: Minimum confidence to apply blending
-        enable_knowledge_boost: Whether to boost scores based on KB gaps
+        task_analysis: Existing task analysis
+        text_content: Document content
+        blend_weight: KB influence weight (0-1)
+        min_confidence: Minimum confidence threshold
+        enable_knowledge_boost: Enable priority boost for knowledge gaps
+        thresholds_config: Custom threshold configuration
     
     Returns:
-        Enhanced task analysis with knowledge grounding and reasoning context
+        Enhanced task analysis with KB grounding
     """
     try:
-        # Initialize engine
-        engine = KnowledgeGroundingEngine(namespace="knowledge_base")
+        # Initialize engine with custom config
+        engine = KnowledgeGroundingEngine(
+            namespace="knowledge_base",
+            use_cache=True,
+            thresholds_config=thresholds_config
+        )
         
-        # Prepare metadata from task analysis
+        # Prepare metadata
         metadata = {
             'category': task_analysis.get('category', 'general'),
             'complexity': task_analysis.get('complexity', 5),
@@ -1120,7 +1673,7 @@ def enhance_task_with_knowledge(
             'topic': task_analysis.get('task', 'unknown')
         }
         
-        # Compute knowledge grounding
+        # Compute KB relevance
         kb_result = engine.compute_knowledge_relevance(
             text=text_content,
             metadata=metadata,
@@ -1131,7 +1684,7 @@ def enhance_task_with_knowledge(
         # Add to task analysis
         task_analysis['knowledge_grounding'] = kb_result
         
-        # Extract key metrics
+        # Extract metrics
         kr_score = kb_result['knowledge_relevance_score']
         confidence = kb_result['confidence']
         kb_depth = kb_result['knowledge_depth']
@@ -1139,21 +1692,20 @@ def enhance_task_with_knowledge(
         # Original score
         original_score = task_analysis.get('preferred_score', 5.0)
         
-        # Apply knowledge-based adjustment
+        # Apply KB-based adjustment
         if confidence >= min_confidence:
-            # Dynamic blending based on confidence
+            # Dynamic blending
             effective_blend = blend_weight * (1 + confidence * 0.5)
             effective_blend = min(effective_blend, 0.5)  # Cap at 50%
             
-            # Base blended score
+            # Blend scores
             blended_score = (
                 original_score * (1 - effective_blend) +
                 kr_score * 10 * effective_blend
             )
             
-            # Knowledge gap boost (optional)
+            # Knowledge gap boost
             if enable_knowledge_boost and kb_depth in ['minimal', 'limited', 'none']:
-                # Boost priority for topics with limited KB coverage
                 gap_boost = 0.15 * (1 - (kr_score * confidence))
                 blended_score += gap_boost
                 task_analysis['knowledge_gap_boost'] = round(gap_boost, 3)
@@ -1171,23 +1723,23 @@ def enhance_task_with_knowledge(
             task_analysis['adjustment_factor'] = 0.0
             task_analysis['knowledge_influence'] = "minimal"
         
-        # Generate reasoning context for LLM
+        # Generate reasoning context
         task_analysis['kb_reasoning_context'] = _generate_kb_reasoning_context(
             kb_result=kb_result,
             task_analysis=task_analysis,
             original_score=original_score
         )
         
-        # Add interpretative flags
+        # Interpretation
         task_analysis['kb_interpretation'] = _interpret_kb_result(kb_result)
         
-        print(f"   ✅ Knowledge enhancement: KR={kr_score:.3f}, Conf={confidence:.3f}, "
+        print(f"   ✅ KB Enhancement: KR={kr_score:.3f}, Conf={confidence:.3f}, "
               f"Adjusted={task_analysis['knowledge_adjusted_score']:.2f}")
         
         return task_analysis
         
     except Exception as e:
-        print(f"⚠️ Knowledge enhancement failed: {e}")
+        print(f"⚠️ KB enhancement failed: {e}")
         import traceback
         traceback.print_exc()
         
@@ -1200,7 +1752,7 @@ def enhance_task_with_knowledge(
         task_analysis['knowledge_adjusted_score'] = task_analysis.get('preferred_score', 5.0)
         task_analysis['kb_reasoning_context'] = {
             "status": "unavailable",
-            "note": "Knowledge grounding unavailable, using standard analysis"
+            "note": "KB grounding unavailable"
         }
         
         return task_analysis
@@ -1211,17 +1763,12 @@ def _generate_kb_reasoning_context(
     task_analysis: Dict,
     original_score: float
 ) -> Dict:
-    """
-    Generate structured reasoning context for LLM to use in explanations.
-    
-    This provides the "why" behind knowledge-based adjustments.
-    """
+    """Generate structured reasoning context for LLM."""
     kr_score = kb_result['knowledge_relevance_score']
     confidence = kb_result['confidence']
     kb_depth = kb_result['knowledge_depth']
     context = kb_result.get('context', {})
     
-    # Build reasoning elements
     reasoning = {
         "knowledge_coverage": {
             "depth": kb_depth,
@@ -1230,9 +1777,9 @@ def _generate_kb_reasoning_context(
             "interpretation": None
         },
         "domain_context": {
-            "target_category": kb_result['target_category'],
+            "target_category": kb_result.get('target_category', 'unknown'),
             "dominant_kb_category": kb_result['dominant_kb_category'],
-            "category_alignment": kb_result['target_category'] == kb_result['dominant_kb_category']
+            "category_alignment": kb_result.get('target_category') == kb_result['dominant_kb_category']
         },
         "similarity_metrics": {
             "relevance_score": kr_score,
@@ -1244,79 +1791,76 @@ def _generate_kb_reasoning_context(
     }
     
     # Interpret knowledge coverage
-    if kb_depth.startswith('extensive'):
+    if kb_depth == 'extensive':
         reasoning['knowledge_coverage']['interpretation'] = (
-            "This topic is extensively covered in the knowledge base, suggesting it's a "
-            "well-established area. Students already have substantial reference materials available."
+            "Extensively covered in KB - abundant reference materials available."
         )
         reasoning['priority_rationale'] = (
-            "May receive lower priority due to abundant existing resources, unless urgency is high."
+            "May receive standard/lower priority due to abundant existing resources."
         )
         reasoning['learning_recommendation'] = (
-            "Leverage existing KB materials for self-study. Focus on advanced applications."
+            "Leverage KB materials for self-study. Focus on advanced applications."
         )
     
-    elif kb_depth.startswith('substantial'):
+    elif kb_depth == 'substantial':
         reasoning['knowledge_coverage']['interpretation'] = (
-            "Good knowledge base coverage exists for this topic, providing solid foundation materials."
+            "Good KB coverage provides solid foundation."
         )
         reasoning['priority_rationale'] = (
-            "Standard priority - balanced against urgency and complexity factors."
+            "Standard priority - balanced against other factors."
         )
         reasoning['learning_recommendation'] = (
-            "Use KB materials as supplementary resources. Build on existing foundations."
+            "Use KB materials as supplementary resources."
         )
     
     elif kb_depth in ['moderate', 'limited']:
         reasoning['knowledge_coverage']['interpretation'] = (
-            "Limited knowledge base coverage suggests this is a less-explored topic or emerging area."
+            "Limited KB coverage suggests less-explored topic."
         )
         reasoning['priority_rationale'] = (
-            "May receive priority boost to fill knowledge gaps, especially if foundational."
+            "May receive priority boost to fill knowledge gaps."
         )
         reasoning['learning_recommendation'] = (
-            "This material could be valuable for expanding knowledge base. Consider detailed study."
+            "Valuable material for expanding knowledge base."
         )
     
     elif kb_depth in ['minimal', 'none']:
         reasoning['knowledge_coverage']['interpretation'] = (
-            "Minimal or no knowledge base coverage - this represents a significant knowledge gap."
+            "Minimal/no KB coverage - significant knowledge gap."
         )
         reasoning['priority_rationale'] = (
-            "Priority boost applied due to knowledge gap. Important for comprehensive learning."
+            "Priority boost applied due to knowledge gap."
         )
         reasoning['learning_recommendation'] = (
-            "High value learning opportunity. Could establish foundational understanding in new area."
+            "High-value learning opportunity in new area."
         )
     
-    # Add contextual interpretation
+    # Add contextual insights
     if context.get('interpretation'):
         reasoning['complexity_context'] = context['interpretation']
     
-    if context.get('source_recommendation'):
-        reasoning['source_context'] = context['source_recommendation']
+    if context.get('recommendation'):
+        reasoning['source_context'] = context['recommendation']
     
     # Score adjustment explanation
     adjusted_score = task_analysis.get('knowledge_adjusted_score', original_score)
     if abs(adjusted_score - original_score) > 0.5:
         reasoning['adjustment_explanation'] = (
-            f"Priority score adjusted from {original_score:.2f} to {adjusted_score:.2f} "
-            f"based on knowledge base analysis (confidence: {confidence:.2f}). "
-            f"Adjustment reflects {reasoning['priority_rationale']}"
+            f"Priority adjusted from {original_score:.2f} to {adjusted_score:.2f} "
+            f"based on KB analysis (confidence: {confidence:.2f}). "
+            f"{reasoning['priority_rationale']}"
         )
     else:
         reasoning['adjustment_explanation'] = (
-            f"Priority score maintained at {original_score:.2f}. "
-            f"Knowledge base analysis confirms standard prioritization."
+            f"Priority maintained at {original_score:.2f}. "
+            f"KB analysis confirms standard prioritization."
         )
     
     return reasoning
 
 
 def _interpret_kb_result(kb_result: Dict) -> str:
-    """
-    Generate human-readable interpretation of KB result.
-    """
+    """Generate human-readable KB result interpretation."""
     kr_score = kb_result['knowledge_relevance_score']
     confidence = kb_result['confidence']
     kb_depth = kb_result['knowledge_depth']
@@ -1324,13 +1868,13 @@ def _interpret_kb_result(kb_result: Dict) -> str:
     if confidence < 0.3:
         return "Insufficient KB data for reliable assessment"
     
-    if kb_depth.startswith('extensive'):
+    if kb_depth == 'extensive':
         if kr_score > 0.75:
-            return "Extensively covered - abundant high-quality KB resources available"
+            return "Extensively covered - abundant high-quality KB resources"
         else:
-            return "Broad KB coverage but lower relevance - tangentially related materials"
+            return "Broad KB coverage but lower relevance"
     
-    elif kb_depth.startswith('substantial'):
+    elif kb_depth == 'substantial':
         return "Well-covered in KB - good foundation materials exist"
     
     elif kb_depth in ['moderate', 'limited']:
@@ -1343,101 +1887,31 @@ def _interpret_kb_result(kb_result: Dict) -> str:
         return "Minimal/no KB coverage - significant knowledge gap"
 
 
-def compare_documents_by_knowledge(
-    doc1: Dict,
-    doc2: Dict,
-    text1: str,
-    text2: str
-) -> Dict:
-    """
-    Compare two documents based on knowledge base relevance.
-    Useful for tie-breaking in prioritization.
-    """
-    engine = KnowledgeGroundingEngine(namespace="knowledge_base")
-    
-    kr1 = engine.compute_knowledge_relevance(text1, doc1)
-    kr2 = engine.compute_knowledge_relevance(text2, doc2)
-    
-    score1 = kr1['knowledge_relevance_score']
-    score2 = kr2['knowledge_relevance_score']
-    conf1 = kr1['confidence']
-    conf2 = kr2['confidence']
-    depth1 = kr1['knowledge_depth']
-    depth2 = kr2['knowledge_depth']
-    
-    # Determine winner with reasoning
-    score_diff = abs(score1 - score2)
-    
-    if score_diff < 0.1 and abs(conf1 - conf2) < 0.2:
-        winner = "tie"
-        recommendation = (
-            f"Equal KB support (scores: {score1:.2f} vs {score2:.2f}). "
-            f"Use urgency/complexity for prioritization."
-        )
-    elif score1 > score2:
-        winner = "doc1"
-        recommendation = (
-            f"Doc1 has stronger KB relevance ({score1:.2f} vs {score2:.2f}, "
-            f"depth: {depth1} vs {depth2}). "
-            f"{'However, lower confidence.' if conf1 < 0.5 else 'High confidence.'}"
-        )
-    else:
-        winner = "doc2"
-        recommendation = (
-            f"Doc2 has stronger KB relevance ({score2:.2f} vs {score1:.2f}, "
-            f"depth: {depth2} vs {depth1}). "
-            f"{'However, lower confidence.' if conf2 < 0.5 else 'High confidence.'}"
-        )
-    
-    return {
-        "winner": winner,
-        "doc1": {
-            "score": score1,
-            "confidence": conf1,
-            "depth": depth1
-        },
-        "doc2": {
-            "score": score2,
-            "confidence": conf2,
-            "depth": depth2
-        },
-        "score_difference": score_diff,
-        "confidence_difference": abs(conf1 - conf2),
-        "recommendation": recommendation,
-        "reasoning": {
-            "doc1_interpretation": _interpret_kb_result(kr1),
-            "doc2_interpretation": _interpret_kb_result(kr2)
-        }
-    }
-
-
-# ==================== CACHE MANAGEMENT ====================
-
 def refresh_knowledge_base_cache():
     """
-    Refresh all knowledge base statistics cache.
-    Call this after ingesting new document batches.
+    Refresh all KB caches after document ingestion.
     """
     engine = KnowledgeGroundingEngine(namespace="knowledge_base", use_cache=True)
-    engine.refresh_cache()
+    engine.refresh_all_caches()
     
-    stats = engine.get_statistics_summary()
-    print(f"📊 Knowledge Base Statistics:")
-    print(f"   Total categories: {stats['total_categories']}")
-    print(f"   Most common: {stats['most_common_category']}")
-    print(f"   Least common: {stats['least_common_category']}")
+    stats = engine.get_system_status()
+    
+    print(f"📊 Knowledge Base Status:")
+    print(f"   Total categories: {stats['category_system']['total_categories']}")
+    print(f"   Tracked categories: {stats['statistics']['categories_tracked']}")
+    print(f"   Total samples: {stats['statistics']['total_samples']}")
     
     return stats
 
 
-# ==================== TESTING & VALIDATION ====================
+# ==================== TESTING ====================
 
 def test_knowledge_grounding(sample_text: str = None, sample_metadata: Dict = None):
     """
-    Test knowledge grounding system.
+    Test knowledge grounding system with dynamic components.
     """
     print("=" * 80)
-    print("🧪 TESTING KNOWLEDGE GROUNDING SYSTEM")
+    print("🧪 TESTING DYNAMIC KNOWLEDGE GROUNDING SYSTEM")
     print("=" * 80)
     
     engine = KnowledgeGroundingEngine(namespace="knowledge_base")
@@ -1464,7 +1938,7 @@ def test_knowledge_grounding(sample_text: str = None, sample_metadata: Dict = No
     print(f"   Category: {sample_metadata.get('category', 'Unknown')}")
     print(f"   Text length: {len(sample_text)} characters")
     
-    # Test knowledge grounding
+    # Test KB grounding
     result = engine.compute_knowledge_relevance(
         text=sample_text,
         metadata=sample_metadata,
@@ -1476,13 +1950,7 @@ def test_knowledge_grounding(sample_text: str = None, sample_metadata: Dict = No
     print(f"   Confidence: {result['confidence']:.3f}")
     print(f"   Knowledge Depth: {result['knowledge_depth']}")
     print(f"   Documents Found: {result['documents_found']}")
-    print(f"   Top Similarity: {result['top_similarity']:.3f}")
     print(f"   Category Coverage: {result['category_coverage']}")
-    
-    if result.get('context'):
-        print(f"\n💡 Context:")
-        print(f"   Dominant KB Category: {result['context'].get('dominant_category', 'N/A')}")
-        print(f"   Interpretation: {result['context'].get('interpretation', 'N/A')[:100]}...")
     
     # Test enhancement
     print(f"\n🔧 Testing Task Enhancement:")
@@ -1506,12 +1974,19 @@ def test_knowledge_grounding(sample_text: str = None, sample_metadata: Dict = No
     print(f"   Adjusted Score: {enhanced.get('knowledge_adjusted_score', 'N/A')}")
     print(f"   Adjustment Factor: {enhanced.get('adjustment_factor', 0):.3f}")
     print(f"   KB Influence: {enhanced.get('knowledge_influence', 'unknown')}")
-    print(f"   Interpretation: {enhanced.get('kb_interpretation', 'N/A')}")
+    
+    # Test system status
+    print(f"\n📊 System Status:")
+    status = engine.get_system_status()
+    print(f"   Status: {status['status']}")
+    print(f"   Total Categories: {status['category_system']['total_categories']}")
+    print(f"   Dynamic Learning: {status['category_system']['dynamic_learning']}")
+    print(f"   Categories Tracked: {status['statistics']['categories_tracked']}")
     
     print(f"\n✅ Test complete")
     print("=" * 80)
     
-    return result, enhanced
+    return result, enhanced, status
 
 
 def validate_schema_handling():
@@ -1538,17 +2013,16 @@ def validate_schema_handling():
         {
             "name": "Alternative Field Names",
             "metadata": {
-                "subject": "data science",  # instead of category
-                "difficulty": 8,             # instead of complexity
-                "page_count": 150,           # instead of pages
-                "doc_type": "research_paper" # instead of source_type
+                "subject": "data science",
+                "difficulty": 8,
+                "page_count": 150,
+                "doc_type": "research_paper"
             }
         },
         {
             "name": "Missing Fields",
             "metadata": {
                 "category": "programming"
-                # missing most fields
             }
         },
         {
@@ -1558,9 +2032,9 @@ def validate_schema_handling():
         {
             "name": "Non-standard Values",
             "metadata": {
-                "category": "CS 101",  # needs normalization
-                "complexity": "hard",  # string instead of int
-                "pages": "unknown"     # invalid type
+                "category": "CS 101",
+                "complexity": "hard",
+                "pages": "unknown"
             }
         }
     ]
@@ -1582,5 +2056,7 @@ def validate_schema_handling():
 
 
 if __name__ == "__main__":
+    # Run tests
     test_knowledge_grounding()
     validate_schema_handling()
+    

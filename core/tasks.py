@@ -4,7 +4,9 @@ from celery import shared_task
 from .models import Upload, Chunk
 from .pdf_utils import extract_text_from_pdf, chunk_text, sanitize_text
 from .llm_config import embeddings, INDEX_NAME
-from langchain_pinecone import PineconeVectorStore
+# from langchain_pinecone import PineconeVectorStore
+# from langchain_community.vectorstores import Pinecone as PineconeVectorStore
+from langchain_pinecone import Pinecone as PineconeVectorStore
 import os
 import time
 

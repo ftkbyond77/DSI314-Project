@@ -14,6 +14,7 @@ whitenoise
 langchain
 langchain-openai
 langchain-pinecone
+langchain-community
 PyPDF2
 easyocr
 Pillow

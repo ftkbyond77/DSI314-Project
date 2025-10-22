@@ -20,224 +20,225 @@ def _clean_task_name(task_name: str) -> str:
     clean_name = clean_name.strip()
     return clean_name
 
-def _generate_reasoning_fast(tasks: List[Dict], schedule_data: Dict, 
-                             user_goal: str, sort_method: str) -> Dict:
-    """
-    Generate comprehensive, detailed reasoning with 10-12 lines per task.
-    Provides structured reasoning with logical flow and professional presentation.
-    """
-    try:
-        # Build enriched task information
-        task_details = []
-        top_5_tasks = tasks[:5]
-        max_urgency = max((t['analysis'].get('urgency_score', 5) for t in top_5_tasks), default=5)
-        max_complexity = max((t['analysis'].get('complexity', 5) for t in top_5_tasks), default=5)
+# def _generate_reasoning_fast(tasks: List[Dict], schedule_data: Dict, 
+#                              user_goal: str, sort_method: str) -> Dict:
+#     """
+#     Generate comprehensive, detailed reasoning with 10-12 lines per task.
+#     Provides structured reasoning with logical flow and professional presentation.
+#     """
+#     try:
+#         # Build enriched task information
+#         task_details = []
+#         top_5_tasks = tasks[:5]
+#         max_urgency = max((t['analysis'].get('urgency_score', 5) for t in top_5_tasks), default=5)
+#         max_complexity = max((t['analysis'].get('complexity', 5) for t in top_5_tasks), default=5)
         
-        for idx, task in enumerate(top_5_tasks, 1):
-            analysis = task['analysis']
-            urgency = analysis.get('urgency_score', 5)
-            complexity = analysis.get('complexity', 5)
-            urgency_ratio = (urgency / max_urgency) if max_urgency > 0 else 0
-            complexity_ratio = (complexity / max_complexity) if max_complexity > 0 else 0
+#         for idx, task in enumerate(top_5_tasks, 1):
+#             analysis = task['analysis']
+#             urgency = analysis.get('urgency_score', 5)
+#             complexity = analysis.get('complexity', 5)
+#             urgency_ratio = (urgency / max_urgency) if max_urgency > 0 else 0
+#             complexity_ratio = (complexity / max_complexity) if max_complexity > 0 else 0
             
-            clean_task_name = _clean_task_name(task['task'])
+#             clean_task_name = _clean_task_name(task['task'])
             
-            task_details.append({
-                'name': clean_task_name,
-                'category': analysis['category'],
-                'pages': analysis['pages'],
-                'complexity': complexity,
-                'urgency': urgency,
-                'urgency_ratio': urgency_ratio,
-                'complexity_ratio': complexity_ratio,
-                'is_foundational': analysis.get('is_foundational', False),
-                'estimated_hours': analysis.get('estimated_hours', 0),
-                'priority': task['priority']
-            })
+#             task_details.append({
+#                 'name': clean_task_name,
+#                 'category': analysis['category'],
+#                 'pages': analysis['pages'],
+#                 'complexity': complexity,
+#                 'urgency': urgency,
+#                 'urgency_ratio': urgency_ratio,
+#                 'complexity_ratio': complexity_ratio,
+#                 'is_foundational': analysis.get('is_foundational', False),
+#                 'estimated_hours': analysis.get('estimated_hours', 0),
+#                 'priority': task['priority']
+#             })
         
-        # Enhanced system prompt for professional, detailed reasoning
-        system_prompt = """You are an expert academic strategist providing comprehensive, logical study guidance.
+#         # Enhanced system prompt for professional, detailed reasoning
+#         system_prompt = """You are an expert academic strategist providing comprehensive, logical study guidance.
 
-**CRITICAL REQUIREMENTS FOR REASONING:**
-- Generate EXACTLY 10-12 lines of reasoning per task (mix of sentences and bullet points)
-- Use professional, academic language with specific metrics and data
-- Structure reasoning with clear logical flow: Context → Analysis → Impact → Strategy → Execution
-- Include quantitative justifications (percentages, scores, time estimates)
-- Make explicit comparisons between tasks to justify ranking
-- Use bullet points for specific action items and key insights
-- Maintain consistent professional tone throughout
+# **CRITICAL REQUIREMENTS FOR REASONING:**
+# - Generate EXACTLY 10-12 lines of reasoning per task (mix of sentences and bullet points)
+# - Use professional, academic language with specific metrics and data
+# - Structure reasoning with clear logical flow: Context → Analysis → Impact → Strategy → Execution
+# - Include quantitative justifications (percentages, scores, time estimates)
+# - Make explicit comparisons between tasks to justify ranking
+# - Use bullet points for specific action items and key insights
+# - Maintain consistent professional tone throughout
 
-**REASONING STRUCTURE:**
-1. Opening Statement (1-2 lines): Why this task ranks at this position
-2. Quantitative Analysis (2-3 bullet points): Metrics, scores, comparative data
-3. Strategic Importance (2-3 lines): How it fits the overall study plan
-4. Learning Dependencies (1-2 lines): Prerequisites and what it enables
-5. Execution Recommendations (2-3 bullet points): Specific study approaches
-6. Expected Outcomes (1 line): What mastery looks like
+# **REASONING STRUCTURE:**
+# 1. Opening Statement (1-2 lines): Why this task ranks at this position
+# 2. Quantitative Analysis (2-3 bullet points): Metrics, scores, comparative data
+# 3. Strategic Importance (2-3 lines): How it fits the overall study plan
+# 4. Learning Dependencies (1-2 lines): Prerequisites and what it enables
+# 5. Execution Recommendations (2-3 bullet points): Specific study approaches
+# 6. Expected Outcomes (1 line): What mastery looks like
 
-Be specific, data-driven, and actionable. No generic statements."""
+# Be specific, data-driven, and actionable. No generic statements."""
         
-        top_3_tasks = tasks[:3]
+#         top_3_tasks = tasks[:3]
         
-        # Format task details for prompt
-        task_comparison = "\n".join([
-            f"Task {i+1}: {td['name']} | Pages: {td['pages']} | Complexity: {td['complexity']}/10 | "
-            f"Urgency: {td['urgency']}/10 | Category: {td['category']} | Est. Time: {td['estimated_hours']}h"
-            for i, td in enumerate(task_details[:3])
-        ])
+#         # Format task details for prompt
+#         task_comparison = "\n".join([
+#             f"Task {i+1}: {td['name']} | Pages: {td['pages']} | Complexity: {td['complexity']}/10 | "
+#             f"Urgency: {td['urgency']}/10 | Category: {td['category']} | Est. Time: {td['estimated_hours']}h"
+#             for i, td in enumerate(task_details[:3])
+#         ])
         
-        user_prompt = f"""**STUDENT'S GOAL:** {user_goal}
-**PRIORITIZATION METHOD:** {sort_method}
-**AVAILABLE DATA:**
+#         user_prompt = f"""**STUDENT'S GOAL:** {user_goal}
+# **PRIORITIZATION METHOD:** {sort_method}
+# **AVAILABLE DATA:**
 
-{task_comparison}
+# {task_comparison}
 
----
+# ---
 
-**GENERATE COMPREHENSIVE REASONING FOR EACH TASK:**
+# **GENERATE COMPREHENSIVE REASONING FOR EACH TASK:**
 
-For each of the 3 tasks above, provide EXACTLY 10-12 lines of detailed reasoning following this structure:
+# For each of the 3 tasks above, provide EXACTLY 10-12 lines of detailed reasoning following this structure:
 
-### Task 1: {task_details[0]['name']}
+# ### Task 1: {task_details[0]['name']}
 
-[Opening: 1-2 lines explaining why this is ranked #1, referencing the {sort_method} method and specific metrics]
+# [Opening: 1-2 lines explaining why this is ranked #1, referencing the {sort_method} method and specific metrics]
 
-**Quantitative Justification:**
-• Urgency Score: {task_details[0]['urgency']}/10 ({"%.0f" % (task_details[0]['urgency_ratio']*100)}% of maximum) - [explain urgency factors]
-• Complexity Level: {task_details[0]['complexity']}/10 - [explain difficulty and prerequisites]
-• Time Investment: {task_details[0]['estimated_hours']} hours required for comprehensive mastery
+# **Quantitative Justification:**
+# • Urgency Score: {task_details[0]['urgency']}/10 ({"%.0f" % (task_details[0]['urgency_ratio']*100)}% of maximum) - [explain urgency factors]
+# • Complexity Level: {task_details[0]['complexity']}/10 - [explain difficulty and prerequisites]
+# • Time Investment: {task_details[0]['estimated_hours']} hours required for comprehensive mastery
 
-**Strategic Positioning:**
-[2-3 lines explaining how this task serves as a cornerstone for achieving "{user_goal}". Include specific connections to other materials and learning objectives. Reference the {task_details[0]['pages']} pages of content and how they build critical knowledge.]
+# **Strategic Positioning:**
+# [2-3 lines explaining how this task serves as a cornerstone for achieving "{user_goal}". Include specific connections to other materials and learning objectives. Reference the {task_details[0]['pages']} pages of content and how they build critical knowledge.]
 
-**Learning Architecture:**
-{"This material serves as a foundation for subsequent topics." if task_details[0]['is_foundational'] else "This builds upon previously established concepts."} [1-2 lines on dependencies]
+# **Learning Architecture:**
+# {"This material serves as a foundation for subsequent topics." if task_details[0]['is_foundational'] else "This builds upon previously established concepts."} [1-2 lines on dependencies]
 
-**Implementation Strategy:**
-• Begin with a 30-minute overview scan to map key concepts across all {task_details[0]['pages']} pages
-• Allocate {"intensive 2-hour blocks" if task_details[0]['complexity'] >= 7 else "focused 90-minute sessions"} for deep engagement
-• Create comprehensive notes and practice problems for retention
+# **Implementation Strategy:**
+# • Begin with a 30-minute overview scan to map key concepts across all {task_details[0]['pages']} pages
+# • Allocate {"intensive 2-hour blocks" if task_details[0]['complexity'] >= 7 else "focused 90-minute sessions"} for deep engagement
+# • Create comprehensive notes and practice problems for retention
 
-**Success Metrics:** Complete understanding demonstrated through ability to solve complex problems and explain concepts to others.
+# **Success Metrics:** Complete understanding demonstrated through ability to solve complex problems and explain concepts to others.
 
----
+# ---
 
-### Task 2: {task_details[1]['name']}
+# ### Task 2: {task_details[1]['name']}
 
-[Similar structure with 10-12 lines, explaining why it's #2, comparing with Task 1]
+# [Similar structure with 10-12 lines, explaining why it's #2, comparing with Task 1]
 
----
+# ---
 
-### Task 3: {task_details[2]['name']}
+# ### Task 3: {task_details[2]['name']}
 
-[Similar structure with 10-12 lines, explaining why it's #3, comparing with Tasks 1 & 2]"""
+# [Similar structure with 10-12 lines, explaining why it's #3, comparing with Tasks 1 & 2]"""
         
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt)
-        ]
+#         messages = [
+#             SystemMessage(content=system_prompt),
+#             HumanMessage(content=user_prompt)
+#         ]
         
-        response = llm.invoke(messages)
-        full_explanation = response.content.strip()
+#         response = llm.invoke(messages)
+#         full_explanation = response.content.strip()
         
-        # Parse and structure the reasoning
-        task_reasoning = {}
+#         # Parse and structure the reasoning
+#         task_reasoning = {}
         
-        for task_idx, task in enumerate(top_3_tasks, 1):
-            task_name = task["task"]
-            clean_name = _clean_task_name(task_name)
+#         for task_idx, task in enumerate(top_3_tasks, 1):
+#             task_name = task["task"]
+#             clean_name = _clean_task_name(task_name)
             
-            # Extract the detailed reasoning for this task
-            explanation = _extract_enhanced_reasoning(full_explanation, clean_name, task_idx)
+#             # Extract the detailed reasoning for this task
+#             explanation = _extract_enhanced_reasoning(full_explanation, clean_name, task_idx)
             
-            if not explanation:
-                # Generate detailed fallback reasoning
-                explanation = _generate_enhanced_fallback(
-                    clean_name, 
-                    task_details[task_idx - 1],
-                    sort_method,
-                    user_goal,
-                    task_idx,
-                    task_details
-                )
+#             if not explanation:
+#                 # Generate detailed fallback reasoning
+#                 explanation = _generate_enhanced_fallback(
+#                     clean_name, 
+#                     task_details[task_idx - 1],
+#                     sort_method,
+#                     user_goal,
+#                     task_idx,
+#                     task_details
+#                 )
             
-            task_reasoning[task_name] = explanation
+#             task_reasoning[task_name] = explanation
         
-        # Enhanced reasoning for remaining tasks (4+)
-        for idx, task in enumerate(tasks[3:], 4):
-            task_name = task["task"]
-            clean_name = _clean_task_name(task_name)
-            analysis = task["analysis"]
+#         # Enhanced reasoning for remaining tasks (4+)
+#         for idx, task in enumerate(tasks[3:], 4):
+#             task_name = task["task"]
+#             clean_name = _clean_task_name(task_name)
+#             analysis = task["analysis"]
             
-            task_reasoning[task_name] = f"""## {clean_name}
+#             task_reasoning[task_name] = f"""## {clean_name}
 
-**Priority Ranking:** Position #{idx} in study sequence
-**Document Metrics:** {analysis.get('pages', 0)} pages | {analysis.get('estimated_hours', 0)} hours estimated study time
+# **Priority Ranking:** Position #{idx} in study sequence
+# **Document Metrics:** {analysis.get('pages', 0)} pages | {analysis.get('estimated_hours', 0)} hours estimated study time
 
-**Quantitative Assessment:**
-• Urgency Level: {analysis.get('urgency_score', 5)}/10 - {"High priority for upcoming assessments" if analysis.get('urgency_score', 5) >= 7 else "Moderate timeline flexibility"}
-• Complexity Rating: {analysis.get('complexity', 5)}/10 - {"Advanced material requiring prerequisite knowledge" if analysis.get('complexity', 5) >= 7 else "Accessible with current knowledge base"}
-• Category: {analysis.get('category', 'General')} - Core component of curriculum
+# **Quantitative Assessment:**
+# • Urgency Level: {analysis.get('urgency_score', 5)}/10 - {"High priority for upcoming assessments" if analysis.get('urgency_score', 5) >= 7 else "Moderate timeline flexibility"}
+# • Complexity Rating: {analysis.get('complexity', 5)}/10 - {"Advanced material requiring prerequisite knowledge" if analysis.get('complexity', 5) >= 7 else "Accessible with current knowledge base"}
+# • Category: {analysis.get('category', 'General')} - Core component of curriculum
 
-**Strategic Relevance:**
-This material {"forms a foundational component" if analysis.get('is_foundational') else "builds upon established foundations"} supporting the goal: "{user_goal}".
-Recommended to study after completing higher-priority materials for optimal knowledge integration.
+# **Strategic Relevance:**
+# This material {"forms a foundational component" if analysis.get('is_foundational') else "builds upon established foundations"} supporting the goal: "{user_goal}".
+# Recommended to study after completing higher-priority materials for optimal knowledge integration.
 
-**Study Approach:** Allocate dedicated focus blocks with regular review sessions for retention."""
+# **Study Approach:** Allocate dedicated focus blocks with regular review sessions for retention."""
         
-        # Enhanced schedule reasoning
-        schedule_reasoning = f"""**Optimized Weekly Schedule Analysis:**
+#         # Enhanced schedule reasoning
+#         schedule_reasoning = f"""**Optimized Weekly Schedule Analysis:**
 
-Total study time allocated: {schedule_data.get('total_allocated_hours', 0)} hours
-Utilization efficiency: {schedule_data.get('utilization_percent', 0)}% of available time
-Schedule optimization method: {sort_method} prioritization
+# Total study time allocated: {schedule_data.get('total_allocated_hours', 0)} hours
+# Utilization efficiency: {schedule_data.get('utilization_percent', 0)}% of available time
+# Schedule optimization method: {sort_method} prioritization
 
-The schedule has been algorithmically optimized to:
-• Balance high-complexity materials with lighter review sessions
-• Align with your stated preferences and constraints
-• Maximize retention through spaced repetition principles
-• Ensure adequate preparation time for assessments"""
+# The schedule has been algorithmically optimized to:
+# • Balance high-complexity materials with lighter review sessions
+# • Align with your stated preferences and constraints
+# • Maximize retention through spaced repetition principles
+# • Ensure adequate preparation time for assessments"""
         
-        return {
-            "full_explanation": full_explanation,
-            "schedule": schedule_reasoning,
-            "tasks": task_reasoning,
-            "method": sort_method
-        }
+#         return {
+#             "full_explanation": full_explanation,
+#             "schedule": schedule_reasoning,
+#             "tasks": task_reasoning,
+#             "method": sort_method
+#         }
     
-    except Exception as e:
-        print(f"⚠️ Reasoning generation failed: {e}")
-        # Generate fallback reasoning for all tasks
-        task_reasoning = {}
-        for idx, task in enumerate(tasks, 1):
-            task_name = task["task"]
-            clean_name = _clean_task_name(task_name)
-            analysis = task["analysis"]
+#     except Exception as e:
+#         print(f"⚠️ Reasoning generation failed: {e}")
+#         # Generate fallback reasoning for all tasks
+#         task_reasoning = {}
+#         for idx, task in enumerate(tasks, 1):
+#             task_name = task["task"]
+#             clean_name = _clean_task_name(task_name)
+#             analysis = task["analysis"]
             
-            task_reasoning[task_name] = _generate_enhanced_fallback(
-                clean_name,
-                {
-                    'name': clean_name,
-                    'category': analysis.get('category', 'General'),
-                    'pages': analysis.get('pages', 0),
-                    'complexity': analysis.get('complexity', 5),
-                    'urgency': analysis.get('urgency_score', 5),
-                    'is_foundational': analysis.get('is_foundational', False),
-                    'estimated_hours': analysis.get('estimated_hours', 0),
-                    'priority': idx
-                },
-                sort_method,
-                user_goal,
-                min(idx, 3),
-                []
-            )
+#             task_reasoning[task_name] = _generate_enhanced_fallback(
+#                 clean_name,
+#                 {
+#                     'name': clean_name,
+#                     'category': analysis.get('category', 'General'),
+#                     'pages': analysis.get('pages', 0),
+#                     'complexity': analysis.get('complexity', 5),
+#                     'urgency': analysis.get('urgency_score', 5),
+#                     'is_foundational': analysis.get('is_foundational', False),
+#                     'estimated_hours': analysis.get('estimated_hours', 0),
+#                     'priority': idx
+#                 },
+#                 sort_method,
+#                 user_goal,
+#                 min(idx, 3),
+#                 []
+#             )
         
-        return {
-            "full_explanation": f"Study plan prioritized using {sort_method} methodology to achieve: {user_goal}",
-            "schedule": schedule_data.get("reasoning", "Optimized weekly schedule based on available time"),
-            "tasks": task_reasoning,
-            "method": sort_method
-        }
+#         return {
+#             "full_explanation": f"Study plan prioritized using {sort_method} methodology to achieve: {user_goal}",
+#             "schedule": schedule_data.get("reasoning", "Optimized weekly schedule based on available time"),
+#             "tasks": task_reasoning,
+#             "method": sort_method
+#         }
+
 
 
 def _extract_enhanced_reasoning(full_text: str, task_name: str, task_idx: int) -> str:
