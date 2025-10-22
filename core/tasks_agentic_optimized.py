@@ -12,6 +12,9 @@ import json
 import time
 import re
 
+from .llm_reasoning_integration import generate_knowledge_grounded_reasoning
+from .knowledge_weighting import refresh_knowledge_base_cache
+
 def _clean_task_name(task_name: str) -> str:
     clean_name = re.sub(r'[^\w\s]', '', task_name)
     clean_name = clean_name.strip()
@@ -373,15 +376,10 @@ schedule_item = {
 def generate_optimized_plan_async(self, user_id, upload_ids, user_goal, 
                                   time_input, constraints, sort_method):
     """
-    Ultra-optimized agentic planning with minimal LLM calls.
-    Uses tool-based analysis for speed, LLM only for final reasoning.
-    
-    Output structure:
-    1. 📅 WEEKLY SCHEDULE (if time provided)
-    2. Priority 1, 2, 3... Tasks with reasoning
+    Ultra-optimized agentic planning with knowledge-grounded reasoning.
     """
     try:
-        print(f"🚀 [Task {self.request.id}] Starting optimized planning")
+        print(f"🚀 [Task {self.request.id}] Starting knowledge-grounded planning")
         start_time = time.time()
         ToolLogger.clear_logs()
 
@@ -400,49 +398,62 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
 
         print(f"   Found {uploads.count()} processed uploads")
 
-        # Phase 1: Fast Task Analysis (Tool-based, no LLM)
+        # Phase 1: Fast Task Analysis with KB Grounding
         self.update_state(
             state='PROCESSING',
-            meta={'current': 1, 'total': 4, 'status': 'Analyzing tasks...'}
+            meta={'current': 1, 'total': 4, 'status': 'Analyzing tasks with knowledge base...'}
         )
         
         task_tool = EnhancedTaskAnalysisTool()
         analyzed_tasks = []
         
         for upload in uploads:
-            chunks = list(Chunk.objects.filter(upload=upload).order_by('start_page')[:2])
-            summary = " ".join([chunk.text[:200] for chunk in chunks])
+            # Get content for KB comparison
+            chunks = list(Chunk.objects.filter(upload=upload).order_by('start_page')[:3])
+            content = " ".join([chunk.text[:500] for chunk in chunks])  # More content for KB
+            
             metadata = {
                 "pages": upload.pages or 0, 
                 "chunk_count": Chunk.objects.filter(upload=upload).count(), 
-                "deadline": None
+                "deadline": None,
+                "source_type": "textbook"  # Can be enhanced with actual detection
             }
+            
+            # Analysis with KB grounding enabled
             analysis_result = task_tool._run(
                 task_name=upload.filename, 
-                content_summary=summary, 
+                content_summary=content, 
                 metadata=metadata, 
-                sort_preference=sort_method
+                sort_preference=sort_method,
+                use_knowledge_grounding=True  # Enable KB comparison
             )
+            
             analyzed_tasks.append(json.loads(analysis_result))
 
-        print(f"   Analyzed {len(analyzed_tasks)} tasks")
+        print(f"   Analyzed {len(analyzed_tasks)} tasks with KB grounding")
 
         # Phase 2: Sort and assign priority
         self.update_state(
             state='PROCESSING',
-            meta={'current': 2, 'total': 4, 'status': 'Prioritizing tasks...'}
+            meta={'current': 2, 'total': 4, 'status': 'Prioritizing with KB context...'}
         )
         
-        analyzed_tasks.sort(key=lambda x: x["analysis"].get("preferred_score", 0), reverse=True)
+        # Sort by knowledge-adjusted score if available
+        analyzed_tasks.sort(
+            key=lambda x: x["analysis"].get("knowledge_adjusted_score", 
+                                           x["analysis"].get("preferred_score", 0)), 
+            reverse=True
+        )
+        
         for idx, task in enumerate(analyzed_tasks, 1):
             task["priority"] = idx
 
-        print(f"   Prioritized tasks using '{sort_method}' method")
+        print(f"   Prioritized tasks using '{sort_method}' method with KB weighting")
 
         # Phase 3: Generate schedule
         self.update_state(
             state='PROCESSING',
-            meta={'current': 3, 'total': 4, 'status': 'Creating schedule...'}
+            meta={'current': 3, 'total': 4, 'status': 'Creating optimized schedule...'}
         )
         
         total_hours_available = _convert_time_to_hours(time_input)
@@ -456,48 +467,62 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 sort_method=sort_method
             )
             schedule_data = json.loads(schedule_result)
+            schedule_data['available_hours'] = total_hours_available
+            schedule_data['constraints'] = constraints
             schedule = schedule_data.get("schedule", [])
             print(f"   Created schedule with {len(schedule)} items")
         else:
             schedule_data = {
                 "schedule": [], 
-                "reasoning": "No time availability provided. Tasks are prioritized but not scheduled.",
+                "reasoning": "No time availability provided.",
                 "total_allocated_hours": 0, 
-                "utilization_percent": 0
+                "utilization_percent": 0,
+                "available_hours": 0,
+                "constraints": ""
             }
             schedule = []
-            print(f"   No time provided - skipping schedule creation")
+            print(f"   No time provided - skipping schedule")
 
-        # Phase 4: Generate reasoning
+        # Phase 4: Generate Knowledge-Grounded Reasoning
         self.update_state(
             state='PROCESSING',
-            meta={'current': 4, 'total': 4, 'status': 'Generating reasoning...'}
+            meta={'current': 4, 'total': 4, 'status': 'Generating KB-grounded reasoning...'}
         )
         
-        reasoning = _generate_reasoning_fast(analyzed_tasks, schedule_data, user_goal, sort_method)
+        # USE NEW REASONING ENGINE
+        reasoning = generate_knowledge_grounded_reasoning(
+            tasks=analyzed_tasks,
+            schedule_data=schedule_data,
+            user_goal=user_goal,
+            sort_method=sort_method
+        )
+        
         total_time = time.time() - start_time
 
-        # Build plan_json - SCHEDULE FIRST, THEN TASKS (old code structure)
+        # Build plan_json - SCHEDULE FIRST, THEN TASKS
         plan_json = []
         
-        # ========== ADD SCHEDULE SECTION FIRST ==========
+        # Add schedule section
         if schedule:
             plan_json.append({
                 "file": "📅 WEEKLY SCHEDULE",
                 "priority": 0,
-                "reason": reasoning.get("schedule", schedule_data.get("reasoning", "Optimized weekly schedule")),
+                "reason": reasoning.get("schedule", "Optimized schedule"),
                 "schedule": schedule,
                 "metadata": {
                     "type": "schedule",
                     "total_hours": schedule_data.get("total_allocated_hours", 0),
                     "utilization_percent": schedule_data.get("utilization_percent", 0),
-                    "sort_method": sort_method
+                    "sort_method": sort_method,
+                    "kb_grounded": reasoning.get("kb_grounded", False)
                 }
             })
         
-        # ========== ADD PRIORITIZED TASKS SECTION ==========
+        # Add prioritized tasks with KB-grounded reasoning
         for task in analyzed_tasks:
             analysis = task["analysis"]
+            kb_grounding = analysis.get('knowledge_grounding', {})
+            
             plan_json.append({
                 "file": task["task"],
                 "priority": task["priority"],
@@ -507,7 +532,12 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 "estimated_hours": analysis.get("estimated_hours", 0),
                 "category": analysis.get("category", "general"),
                 "complexity": analysis.get("complexity", 5),
-                "urgency": analysis.get("urgency_score", 5)
+                "urgency": analysis.get("urgency_score", 5),
+                # NEW: Add KB metrics for transparency
+                "kb_relevance": kb_grounding.get("knowledge_relevance_score", 0.5),
+                "kb_confidence": kb_grounding.get("confidence", 0),
+                "kb_depth": kb_grounding.get("knowledge_depth", "unknown"),
+                "knowledge_adjusted": analysis.get("knowledge_adjusted_score") is not None
             })
 
         # Save Plan
@@ -530,7 +560,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             execution_time=total_time,
             total_files=len(uploads),
             total_pages=sum(u.pages or 0 for u in uploads),
-            total_chunks=sum(Chunk.objects.filter(upload__in=uploads).count() for u in uploads),
+            total_chunks=sum(Chunk.objects.filter(upload=u).count() for u in uploads),
             ocr_pages_total=sum(u.ocr_pages for u in uploads)
         )
 
@@ -539,10 +569,29 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         tool_logs = ToolLogger.get_logs()
         tool_summary = ToolLogger.get_summary()
         
+        # Calculate KB statistics
+        kb_stats = {
+            "avg_confidence": sum(
+                t.get('analysis', {}).get('knowledge_grounding', {}).get('confidence', 0)
+                for t in analyzed_tasks
+            ) / len(analyzed_tasks) if analyzed_tasks else 0,
+            "tasks_with_kb": sum(
+                1 for t in analyzed_tasks 
+                if t.get('analysis', {}).get('knowledge_grounding', {}).get('confidence', 0) > 0.3
+            ),
+            "avg_kb_relevance": sum(
+                t.get('analysis', {}).get('knowledge_grounding', {}).get('knowledge_relevance_score', 0)
+                for t in analyzed_tasks
+            ) / len(analyzed_tasks) if analyzed_tasks else 0,
+            "kb_grounded_reasoning": reasoning.get("kb_grounded", False)
+        }
+        
         print(f"✅ [Task {self.request.id}] Completed in {total_time:.2f}s")
         print(f"   Schedule items: {len(schedule)}")
         print(f"   Total tasks: {len(analyzed_tasks)}")
         print(f"   Tool calls: {tool_summary.get('total_calls', 0)}")
+        print(f"   KB-grounded tasks: {kb_stats['tasks_with_kb']}/{len(analyzed_tasks)}")
+        print(f"   Avg KB confidence: {kb_stats['avg_confidence']:.3f}")
         
         return {
             "success": True, 
@@ -554,6 +603,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             "execution_time": round(total_time, 2),
             "tool_logs": tool_logs[-10:],
             "tool_summary": tool_summary,
+            "kb_statistics": kb_stats,
             "reasoning": reasoning.get("full_explanation", "")
         }
 

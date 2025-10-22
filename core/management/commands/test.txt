@@ -1,0 +1,14 @@
+# Test KB grounding
+python manage.py kb_admin test
+
+# Validate schema handling
+python manage.py kb_admin validate
+
+# Refresh cache after batch upload
+python manage.py kb_admin refresh
+
+# Run health check
+python manage.py kb_admin health
+
+# Show statistics
+python manage.py kb_admin stats

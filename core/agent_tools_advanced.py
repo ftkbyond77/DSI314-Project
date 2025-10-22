@@ -8,6 +8,7 @@ import json
 import time
 import re
 from enum import Enum
+from .knowledge_weighting import enhance_task_with_knowledge, SchemaHandler
 
 # ==================== ENUMS FOR FLEXIBILITY ====================
 
@@ -180,21 +181,54 @@ class EnhancedTaskAnalysisInput(BaseModel):
     content_summary: str = Field(description="Content summary")
     metadata: Dict = Field(description="Metadata including pages, deadline, etc.")
     sort_preference: Optional[str] = Field(default="hybrid", description="User's sorting preference")
+    use_knowledge_grounding: Optional[bool] = Field(default=True, description="Enable KB comparison")
+
+# core/agent_tools_advanced.py - UPDATED with Knowledge Grounding Integration
+
+from langchain.tools import BaseTool
+from typing import Type, List, Dict, Optional
+from pydantic import BaseModel, Field
+from datetime import datetime, timedelta
+import json
+import time
+import re
+from enum import Enum
+
+# Import knowledge grounding
+from .knowledge_weighting import enhance_task_with_knowledge, SchemaHandler
+
+# ... [Keep all existing code from your agent_tools_advanced.py] ...
+
+class EnhancedTaskAnalysisInput(BaseModel):
+    """Enhanced input with sorting preferences"""
+    task_name: str = Field(description="Task/document name")
+    content_summary: str = Field(description="Content summary")
+    metadata: Dict = Field(description="Metadata including pages, deadline, etc.")
+    sort_preference: Optional[str] = Field(default="hybrid", description="User's sorting preference")
+    # NEW: Flag to enable knowledge grounding
+    use_knowledge_grounding: Optional[bool] = Field(default=True, description="Enable KB comparison")
 
 class EnhancedTaskAnalysisTool(BaseTool):
-    """Fast, flexible task analysis with type detection"""
+    """Fast, flexible task analysis with knowledge grounding"""
     name: str = "analyze_task_enhanced"
     description: str = """
-    Enhanced task analysis that considers user preferences and determines task types.
-    Extracts: complexity, time estimate, category, urgency, foundational importance, task type.
-    Respects user's sorting preference (content/pages/urgency/complexity/foundational/hybrid).
+    Enhanced task analysis with knowledge base grounding.
+    Compares incoming materials against knowledge base to determine contextual relevance.
+    Extracts: complexity, time estimate, category, urgency, knowledge relevance, task type.
     """
     args_schema: Type[BaseModel] = EnhancedTaskAnalysisInput
     
-    def _run(self, task_name: str, content_summary: str, metadata: Dict, sort_preference: str = "hybrid") -> str:
+    def _run(
+        self, 
+        task_name: str, 
+        content_summary: str, 
+        metadata: Dict, 
+        sort_preference: str = "hybrid",
+        use_knowledge_grounding: bool = True
+    ) -> str:
         start = time.time()
         
-        # Core analysis
+        # Standard analysis (existing code)
         complexity = self._estimate_complexity(task_name, content_summary, metadata)
         pages = metadata.get("pages", 0)
         chunks = metadata.get("chunk_count", 0)
@@ -203,7 +237,7 @@ class EnhancedTaskAnalysisTool(BaseTool):
         is_foundational = self._check_foundational(task_name, content_summary)
         urgency = self._calculate_urgency(metadata.get("deadline"))
         
-        # Determine task type
+        # Task type determination
         analysis_dict = {
             'complexity': complexity,
             'category': category,
@@ -212,18 +246,17 @@ class EnhancedTaskAnalysisTool(BaseTool):
         }
         task_type = _determine_task_type(task_name, analysis_dict)
         
-        # Calculate base scores for different sorting methods
+        # Calculate base scores
         scores = {
             "content": self._score_by_content(category, is_foundational),
             "pages": self._score_by_pages(pages),
             "urgency": urgency,
-            "complexity": 10 - complexity,  # Lower complexity = higher priority initially
+            "complexity": 10 - complexity,
             "foundational": 10 if is_foundational else 5,
-            "hybrid": self._calculate_hybrid_score(
-                urgency, is_foundational, complexity, category
-            )
+            "hybrid": self._calculate_hybrid_score(urgency, is_foundational, complexity, category)
         }
         
+        # Build initial result
         result = {
             "task": task_name,
             "analysis": {
@@ -234,15 +267,47 @@ class EnhancedTaskAnalysisTool(BaseTool):
                 "urgency_score": urgency,
                 "pages": pages,
                 "chunks": chunks,
-                "task_type": task_type,  # Add task type to analysis
+                "task_type": task_type,
                 "scores": scores,
                 "preferred_score": scores.get(sort_preference, scores["hybrid"]),
                 "sort_method": sort_preference
             }
         }
         
+        # ===== NEW: Knowledge Grounding Integration =====
+        if use_knowledge_grounding and content_summary and len(content_summary) > 50:
+            try:
+                print(f"   🔍 Applying knowledge grounding for: {task_name}")
+                
+                # Enhance with knowledge base comparison
+                result["analysis"] = enhance_task_with_knowledge(
+                    task_analysis=result["analysis"],
+                    text_content=content_summary,
+                    blend_weight=0.30,  # 30% KB influence
+                    min_confidence=0.30,  # Min confidence threshold
+                    enable_knowledge_boost=True  # Boost for KB gaps
+                )
+                
+                # Use knowledge-adjusted score if available
+                if 'knowledge_adjusted_score' in result["analysis"]:
+                    result["analysis"]["preferred_score"] = result["analysis"]["knowledge_adjusted_score"]
+                    result["analysis"]["scores"]["knowledge_weighted"] = result["analysis"]["knowledge_adjusted_score"]
+                
+                print(f"   ✅ Knowledge grounding applied")
+                
+            except Exception as e:
+                print(f"   ⚠️ Knowledge grounding failed: {e}")
+                pass
+        
+        duration = time.time() - start
         output = json.dumps(result, indent=2)
-        ToolLogger.log_call(self.name, {"task": task_name, "sort": sort_preference}, result)
+        
+        ToolLogger.log_call(
+            self.name, 
+            {"task": task_name, "sort": sort_preference, "kb_enabled": use_knowledge_grounding}, 
+            {"result": result, "duration": duration}
+        )
+        
         return output
     
     def _estimate_complexity(self, name: str, summary: str, metadata: Dict) -> int:
@@ -652,7 +717,7 @@ The {sort_method} prioritization ensures critical materials are addressed first 
 # ==================== TOOL REGISTRY ====================
 
 def get_advanced_agent_tools() -> List[BaseTool]:
-    """Return all enhanced tools"""
+    """Return all enhanced tools with knowledge grounding"""
     return [
         EnhancedTaskAnalysisTool(),
         FlexibleSchedulingTool()

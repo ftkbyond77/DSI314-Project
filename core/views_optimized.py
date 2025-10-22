@@ -258,7 +258,7 @@ def planning_status_api(request, task_id):
 # ==================== RESULT PAGE ====================
 @login_required
 def result_page_optimized(request):
-    """Display results with enhanced visualization"""
+    """Display results with KB grounding metrics"""
     latest_plan = Plan.objects.filter(
         user=request.user
     ).order_by('-created_at').first()
@@ -312,6 +312,40 @@ def result_page_optimized(request):
             'utilization': metadata.get('utilization_percent', 0),
             'ocr_pages_processed': ocr_pages_total
         }
+        
+        kb_stats = {
+            'tasks_with_kb': 0,
+            'avg_kb_relevance': 0,
+            'avg_kb_confidence': 0,
+            'high_confidence_tasks': 0,
+            'knowledge_gaps': 0
+        }
+        
+        kb_relevances = []
+        kb_confidences = []
+        
+        for task in tasks:
+            kb_rel = task.get('kb_relevance', 0)
+            kb_conf = task.get('kb_confidence', 0)
+            kb_depth = task.get('kb_depth', 'unknown')
+            
+            if kb_conf > 0:
+                kb_stats['tasks_with_kb'] += 1
+                kb_relevances.append(kb_rel)
+                kb_confidences.append(kb_conf)
+                
+                if kb_conf > 0.7:
+                    kb_stats['high_confidence_tasks'] += 1
+                
+                if kb_depth in ['minimal', 'none', 'limited']:
+                    kb_stats['knowledge_gaps'] += 1
+        
+        if kb_relevances:
+            kb_stats['avg_kb_relevance'] = round(sum(kb_relevances) / len(kb_relevances), 3)
+            kb_stats['avg_kb_confidence'] = round(sum(kb_confidences) / len(kb_confidences), 3)
+        
+        stats['kb_grounding'] = kb_stats
+        
     else:
         tasks = []
         schedule = None
