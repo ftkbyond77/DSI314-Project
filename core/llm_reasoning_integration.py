@@ -71,7 +71,7 @@ Your reasoning should be logical, defensible, and actionable."""
         tasks: List[Dict],
         user_goal: str,
         sort_method: str,
-        max_tasks_detailed: int = 5
+        max_tasks_detailed: int = None  # FIXED: Changed from 5 to None to process all tasks
     ) -> Dict:
         """
         Generate comprehensive reasoning for task prioritization using KB context.
@@ -80,11 +80,15 @@ Your reasoning should be logical, defensible, and actionable."""
             tasks: List of analyzed tasks with KB grounding
             user_goal: Student's learning objective
             sort_method: Prioritization method used
-            max_tasks_detailed: Number of tasks to provide detailed reasoning for
+            max_tasks_detailed: Number of tasks to provide detailed reasoning for (None = all tasks)
         
         Returns:
             Dict with structured reasoning for each task
         """
+        
+        # FIXED: If max_tasks_detailed is None, process all tasks
+        if max_tasks_detailed is None:
+            max_tasks_detailed = len(tasks)
         
         # Prepare task summaries with KB context
         task_summaries = []
@@ -120,7 +124,7 @@ Your reasoning should be logical, defensible, and actionable."""
     """
             task_summaries.append(summary)
         
-        # Build prompt - FIXED f-string escaping
+        # Build prompt - FIXED: Use len(task_summaries) instead of hardcoded value
         user_prompt = f"""**STUDENT'S GOAL:** {user_goal}
     **PRIORITIZATION METHOD:** {sort_method}
 
@@ -132,7 +136,7 @@ Your reasoning should be logical, defensible, and actionable."""
 
     **GENERATE KNOWLEDGE-GROUNDED REASONING:**
 
-    For each of the {max_tasks_detailed} tasks above, provide comprehensive reasoning following the "What, Why, How, Priority" framework. Each task should receive 8-12 lines of detailed analysis that:
+    For each of the {len(task_summaries)} tasks above, provide comprehensive reasoning following the "What, Why, How, Priority" framework. Each task should receive 8-12 lines of detailed analysis that:
 
     1. Describes WHAT the material covers and its characteristics
     2. Explains WHY it matters for the student's goal: "{user_goal}"
@@ -176,7 +180,7 @@ Your reasoning should be logical, defensible, and actionable."""
             # Parse reasoning per task
             task_reasoning = cls._parse_task_reasoning(full_reasoning, tasks[:max_tasks_detailed])
             
-            # Generate summary reasoning for remaining tasks
+            # Generate summary reasoning for remaining tasks (if any)
             for idx, task in enumerate(tasks[max_tasks_detailed:], max_tasks_detailed + 1):
                 task_reasoning[task['task']] = cls._generate_summary_reasoning(
                     task=task,
@@ -493,12 +497,12 @@ def generate_knowledge_grounded_reasoning(
         Comprehensive reasoning dict for all tasks and schedule
     """
     
-    # Generate task prioritization reasoning
+    # FIXED: Generate task prioritization reasoning for ALL tasks (removed max_tasks_detailed limit)
     task_reasoning_result = KnowledgeGroundedReasoningEngine.generate_prioritization_reasoning(
         tasks=tasks,
         user_goal=user_goal,
         sort_method=sort_method,
-        max_tasks_detailed=5
+        max_tasks_detailed=None  # Changed from 5 to None to process all tasks
     )
     
     # Generate schedule reasoning
@@ -540,7 +544,7 @@ def generate_knowledge_grounded_reasoning(
         "kb_grounded": task_reasoning_result.get('kb_grounded', False),
         "metadata": {
             "total_tasks": len(tasks),
-            "detailed_reasoning_count": min(5, len(tasks)),
+            "detailed_reasoning_count": len(tasks),  # FIXED: Changed from min(5, len(tasks)) to len(tasks)
             "kb_confidence_avg": sum(
                 t.get('analysis', {}).get('knowledge_grounding', {}).get('confidence', 0)
                 for t in tasks

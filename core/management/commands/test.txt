@@ -14,6 +14,7 @@ python manage.py kb_admin health
 python manage.py kb_admin stats
 
 
+# ------------------------------------------------------- #
 # List all discovered categories
 python manage.py kb_categories list
 
