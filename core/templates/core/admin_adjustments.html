@@ -1,0 +1,240 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RL Adjustments - Admin - StudyFlow AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-primary {
+            background: linear-gradient(135deg, #0e244d 0%, #0b356c 100%);
+        }
+        
+        .card-white {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .adjustment-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .adjustment-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .weight-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .weight-increase {
+            background: #d1fae5;
+            color: #166534;
+        }
+        
+        .weight-decrease {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .weight-neutral {
+            background: #e2e8f0;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="gradient-primary text-white">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">📈 RL Adjustments History</h1>
+                    <p class="text-blue-100">Reinforcement Learning Weight Adjustments</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{% url 'trigger_rl_adjustment' %}" 
+                       class="bg-white text-blue-900 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-all">
+                        Trigger RL
+                    </a>
+                    <a href="{% url 'upload_page_optimized' %}" 
+                       class="bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-800 transition-all">
+                        Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-blue-600">{{ feedback_stats.total }}</div>
+                <div class="text-sm text-gray-600 mt-1">Total Feedback</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-green-600">{{ feedback_stats.processed }}</div>
+                <div class="text-sm text-gray-600 mt-1">Processed</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-orange-600">{{ feedback_stats.unprocessed }}</div>
+                <div class="text-sm text-gray-600 mt-1">Unprocessed</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-purple-600">{{ feedback_stats.avg_star_rating }}</div>
+                <div class="text-sm text-gray-600 mt-1">Avg Rating</div>
+            </div>
+        </div>
+        
+        <!-- Adjustments List -->
+        {% if adjustments %}
+        <div class="card-white">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Recent RL Adjustments</h2>
+            
+            {% for adj in adjustments %}
+            <div class="adjustment-item">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">
+                            {{ adj.scope|title }} Adjustment
+                        </h3>
+                        <p class="text-sm text-gray-600">
+                            {{ adj.created_at|date:"M d, Y H:i" }}
+                            {% if adj.target_user %}
+                                • User: {{ adj.target_user.username }}
+                            {% endif %}
+                            {% if adj.target_category %}
+                                • Category: {{ adj.target_category }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm font-semibold text-gray-700">
+                            Confidence: {{ adj.confidence|floatformat:1 }}%
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Weight Changes -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                    {% for weight, value in adj.weight_adjustments.items %}
+                    <div>
+                        <span class="weight-badge 
+                            {% if value > 0 %}weight-increase
+                            {% elif value < 0 %}weight-decrease
+                            {% else %}weight-neutral{% endif %}">
+                            {{ weight|title }}
+                        </span>
+                        <div class="text-sm font-bold text-gray-700">
+                            {% if value > 0 %}+{% endif %}{{ value|floatformat:3 }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Reasoning -->
+                {% if adj.reasoning %}
+                <div class="bg-gray-50 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-gray-700">
+                        <strong>Reasoning:</strong> {{ adj.reasoning|truncatewords:30 }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                <!-- Stats -->
+                <div class="flex gap-6 mt-3 text-xs text-gray-600">
+                    <span>Feedback Analyzed: {{ adj.feedback_count }}</span>
+                    <span>Impact Score: {{ adj.impact_score|floatformat:2 }}</span>
+                    {% if adj.performance_delta %}
+                    <span>Performance: {{ adj.performance_delta|floatformat:1 }}%</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="card-white text-center py-16">
+            <div class="text-6xl mb-6">📊</div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">No RL Adjustments Yet</h2>
+            <p class="text-gray-600 mb-8 text-lg">
+                Collect feedback from users and trigger the reinforcement learning system.
+            </p>
+            <a href="{% url 'trigger_rl_adjustment' %}" 
+               class="inline-block bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                Trigger RL Adjustment
+            </a>
+        </div>
+        {% endif %}
+        
+        <!-- Recent Feedback -->
+        {% if recent_feedback %}
+        <div class="card-white">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Recent Feedback</h2>
+            
+            <div class="space-y-3">
+                {% for feedback in recent_feedback %}
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            {% if feedback.thumbs_up %}
+                            <span class="text-green-600 font-bold">👍</span>
+                            {% else %}
+                            <span class="text-red-600 font-bold">👎</span>
+                            {% endif %}
+                            
+                            {% if feedback.rating_type == 'star' or feedback.rating_type == 'detailed' %}
+                            <span class="text-yellow-500">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= feedback.star_rating %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            {% endif %}
+                            
+                            <span class="text-sm text-gray-600">
+                                {{ feedback.user.username }} • {{ feedback.created_at|date:"M d, H:i" }}
+                            </span>
+                            
+                            {% if feedback.processed %}
+                            <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Processed</span>
+                            {% else %}
+                            <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded">Pending</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if feedback.feedback_text %}
+                        <p class="text-sm text-gray-700 mt-2">{{ feedback.feedback_text|truncatewords:15 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

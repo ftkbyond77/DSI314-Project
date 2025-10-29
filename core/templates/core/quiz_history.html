@@ -1,0 +1,182 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz History - StudyFlow AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-primary {
+            background: linear-gradient(135deg, #0e244d 0%, #0b356c 100%);
+        }
+        
+        .card-white {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+        
+        .quiz-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .quiz-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .score-excellent {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .score-good {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .score-average {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .score-poor {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="gradient-primary text-white">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">📚 Quiz History</h1>
+                    <p class="text-blue-100">Your past quiz attempts and scores</p>
+                </div>
+                <a href="{% url 'upload_page_optimized' %}" 
+                   class="bg-white text-blue-900 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-all">
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        {% if quizzes %}
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-gray-800">{{ quizzes|length }}</div>
+                <div class="text-sm text-gray-600 mt-1">Total Quizzes</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-green-600">
+                    {% widthratio quizzes|length quizzes|length 100 %}
+                </div>
+                <div class="text-sm text-gray-600 mt-1">Completion Rate</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-blue-600">
+                    <!-- Average score would go here -->
+                    --
+                </div>
+                <div class="text-sm text-gray-600 mt-1">Avg Score</div>
+            </div>
+            <div class="card-white text-center">
+                <div class="text-3xl font-bold text-purple-600">
+                    {{ quizzes.0.total_questions }}
+                </div>
+                <div class="text-sm text-gray-600 mt-1">Questions/Quiz</div>
+            </div>
+        </div>
+        
+        <!-- Quiz List -->
+        <div class="card-white">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">All Quizzes</h2>
+            
+            <div class="space-y-4">
+                {% for quiz in quizzes %}
+                <a href="{% url 'quiz_results' quiz_id=quiz.id %}" class="block">
+                    <div class="quiz-card">
+                        <div class="flex items-center gap-6">
+                            <!-- Score Badge -->
+                            <div class="score-badge 
+                                {% if quiz.score >= 90 %}score-excellent
+                                {% elif quiz.score >= 75 %}score-good
+                                {% elif quiz.score >= 60 %}score-average
+                                {% else %}score-poor{% endif %}">
+                                {{ quiz.score|floatformat:0 }}%
+                            </div>
+                            
+                            <!-- Quiz Info -->
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-gray-800 mb-1">
+                                    Quiz for: {{ quiz.study_plan.user_goal|truncatewords:8|default:"Study Plan" }}
+                                </h3>
+                                <div class="flex items-center gap-4 text-sm text-gray-600">
+                                    <span>📅 {{ quiz.completed_at|date:"M d, Y" }}</span>
+                                    <span>⏱️ {{ quiz.time_spent_seconds|floatformat:0 }}s</span>
+                                    <span>✓ {{ quiz.correct_answers }}/{{ quiz.total_questions }} correct</span>
+                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded">{{ quiz.difficulty|upper }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- View Button -->
+                            <div>
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="card-white text-center py-16">
+            <div class="text-6xl mb-6">📝</div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">No Quizzes Yet</h2>
+            <p class="text-gray-600 mb-8 text-lg">
+                Generate a study plan and take your first quiz!
+            </p>
+            <a href="{% url 'upload_page_optimized' %}" 
+               class="inline-block bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                Create Study Plan
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

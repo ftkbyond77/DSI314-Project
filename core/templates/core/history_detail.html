@@ -3,38 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>History - {{ stats.generated_at|date:"M d, Y" }}</title>
+    <title>History Detail - {{ stats.generated_at|date:"M d, Y" }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .classic-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        :root {
+            --primary-dark: #0e244d;
+            --primary-medium: #0b356c;
+            --primary-light: #1e4788;
+            --accent: #3b82f6;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-800: #1e293b;
         }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+        }
+
+        .gradient-primary {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+        }
+
+        .gradient-accent {
+            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--accent) 100%);
+        }
+
+        .card-modern {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
         .priority-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+            color: white;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 24px;
+            box-shadow: 0 4px 6px -1px rgba(14, 36, 77, 0.2);
+        }
+
+        .task-card {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .task-card:hover {
+            border-color: var(--primary-medium);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .reasoning-container {
+            background: linear-gradient(135deg, #f0f4ff 0%, #f8faff 100%);
+            border-left: 4px solid var(--primary-medium);
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .reasoning-text {
+            color: var(--gray-800);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .reasoning-text h2, .reasoning-text h3 {
+            color: var(--primary-dark);
+            font-weight: 700;
+            margin-bottom: 12px;
+            margin-top: 16px;
+        }
+
+        .reasoning-text ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .reasoning-text ul li {
+            padding-left: 24px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .reasoning-text ul li::before {
+            content: "•";
+            color: var(--primary-medium);
+            font-weight: bold;
+            position: absolute;
+            left: 8px;
+        }
+
+        .reasoning-text strong {
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .metric-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .schedule-table {
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .schedule-table thead {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+            color: white;
+        }
+
+        .schedule-table th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .schedule-table td {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            font-size: 14px;
+        }
+
+        .schedule-table tbody tr {
+            background: var(--white);
+            transition: background 0.2s ease;
+        }
+
+        .schedule-table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .type-theory { background: linear-gradient(135deg, #ddd6fe 0%, #e9d5ff 100%); color: #6b21a8; }
+        .type-practical { background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 100%); color: #1e40af; }
+        .type-exam { background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%); color: #991b1b; }
+        .type-assignment { background: linear-gradient(135deg, #fed7aa 0%, #ffedd5 100%); color: #9a3412; }
+        .type-review { background: linear-gradient(135deg, #d1fae5 0%, #ecfccb 100%); color: #166534; }
+        .type-workshop { background: linear-gradient(135deg, #fde68a 0%, #fef3c7 100%); color: #92400e; }
+
+        .ocr-banner {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+            color: white;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(14, 36, 77, 0.2);
+        }
+        .success-message {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-left: 4px solid #10b981;
+            border-radius: 8px;
+            padding: 14px 20px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .success-message svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto">
-        <!-- Header -->
-        <div class="classic-card rounded-xl p-6 mb-6">
-            <div class="flex justify-between items-center">
+<body>
+
+    <!-- Header -->
+    <div class="gradient-primary text-white">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800">📜 Study Plan History</h1>
-                    <p class="text-gray-600 mt-1">{{ stats.generated_at|date:"F d, Y - H:i" }}</p>
+                    <h1 class="text-3xl font-bold mb-2">History Detail</h1>
+                    <p class="text-blue-100">Generated on {{ stats.generated_at|date:"F d, Y - H:i" }}</p>
                 </div>
-                <a href="{% url 'upload_page_optimized' %}" 
-                   class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <a href="{% url 'upload_page_optimized' %}" class="btn-primary">
                     ← Back to Plans
                 </a>
             </div>
         </div>
-        
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+
+        <!-- Success Feedback Message -->
+        {% if request.GET.feedback == 'success' %}
+        <div class="success-message">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Thank you! Your feedback has been recorded.</span>
+        </div>
+        {% endif %}
+
         <!-- User Input Summary -->
-        <div class="classic-card rounded-xl p-6 mb-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">📝 Your Input</h2>
+        <div class="card-modern p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Your Input</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% if stats.user_goal %}
                 <div>
@@ -54,79 +297,90 @@
                 {% endif %}
             </div>
         </div>
-        
-        <!-- Statistics -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="classic-card rounded-xl p-5">
-                <div class="text-3xl font-bold text-blue-600">{{ stats.total_files }}</div>
-                <div class="text-sm text-gray-600 mt-1">Documents</div>
+
+        <!-- Statistics Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="stat-card p-6 text-center">
+                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_files }}</div>
+                <div class="text-sm text-gray-600 mt-2">Documents</div>
             </div>
-            <div class="classic-card rounded-xl p-5">
-                <div class="text-3xl font-bold text-green-600">{{ stats.total_pages }}</div>
-                <div class="text-sm text-gray-600 mt-1">Pages</div>
+            <div class="stat-card p-6 text-center">
+                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_pages }}</div>
+                <div class="text-sm text-gray-600 mt-2">Pages</div>
             </div>
-            <div class="classic-card rounded-xl p-5">
-                <div class="text-3xl font-bold text-purple-600">{{ stats.total_hours }}h</div>
-                <div class="text-sm text-gray-600 mt-1">Study Time</div>
+            <div class="stat-card p-6 text-center">
+                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_hours }}h</div>
+                <div class="text-sm text-gray-600 mt-2">Study Time</div>
             </div>
-            <div class="classic-card rounded-xl p-5">
-                <div class="text-3xl font-bold text-orange-600">{{ stats.execution_time|floatformat:1 }}s</div>
-                <div class="text-sm text-gray-600 mt-1">Generated In</div>
+            <div class="stat-card p-6 text-center">
+                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.execution_time|floatformat:1 }}s</div>
+                <div class="text-sm text-gray-600 mt-2">Generated In</div>
             </div>
-            <div class="classic-card rounded-xl p-5">
-                <div class="text-3xl font-bold text-red-600">{{ stats.tool_calls }}</div>
-                <div class="text-sm text-gray-600 mt-1">AI Calls</div>
+            <div class="stat-card p-6 text-center">
+                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.tool_calls }}</div>
+                <div class="text-sm text-gray-600 mt-2">AI Calls</div>
             </div>
         </div>
-        
-        <!-- OCR Info -->
+
+        <!-- OCR Banner -->
         {% if stats.ocr_pages_processed %}
-        <div class="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4 mb-6">
-            <div class="flex items-center space-x-3">
-                <span class="text-3xl">🔍</span>
-                <div>
-                    <div class="font-semibold text-purple-900">OCR Processing Applied</div>
-                    <div class="text-sm text-purple-700">
-                        Extracted text from {{ stats.ocr_pages_processed }} image-based pages
-                    </div>
+        <div class="ocr-banner mb-8">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
+            </svg>
+            <div>
+                <div class="font-semibold text-lg">OCR Processing Applied</div>
+                <div class="text-blue-100 text-sm">
+                    Extracted text from {{ stats.ocr_pages_processed }} image-based pages
                 </div>
             </div>
         </div>
         {% endif %}
-        
-        <!-- Schedule -->
+
+        <!-- Weekly Schedule -->
         {% if schedule %}
-        <div class="classic-card rounded-xl p-6 mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <span class="mr-2">📅</span>
-                Weekly Schedule
+        <div class="card-modern p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <span class="text-3xl">Weekly Schedule</span>
             </h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="bg-gray-100">
+            <div class="schedule-table">
+                <table class="w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Day</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Time</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Task</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Duration</th>
-                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Category</th>
+                            <th>Day</th>
+                            <th>Time</th>
+                            <th>Task</th>
+                            <th>Duration</th>
+                            <th>Category</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody>
                         {% for slot in schedule %}
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ slot.day }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ slot.time }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ slot.task }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
-                                    {{ slot.hours }}h
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-xs">
-                                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                                    {{ slot.category|default:"general" }}
-                                </span>
+                        <tr>
+                            <td class="font-semibold text-gray-800">{{ slot.day }}</td>
+                            <td class="text-gray-700">{{ slot.time }}</td>
+                            <td class="text-gray-800">{{ slot.task }}</td>
+                            <td><span class="font-semibold text-primary-dark">{{ slot.hours }}h</span></td>
+                            <td>
+                                {% if slot.category %}
+                                    {% if slot.category == "Theory" %}
+                                        <span class="type-badge type-theory">Theory</span>
+                                    {% elif slot.category == "Practical" %}
+                                        <span class="type-badge type-practical">Practical</span>
+                                    {% elif slot.category == "Exam Prep" %}
+                                        <span class="type-badge type-exam">Exam</span>
+                                    {% elif slot.category == "Assignment" %}
+                                        <span class="type-badge type-assignment">Assignment</span>
+                                    {% elif slot.category == "Review" %}
+                                        <span class="type-badge type-review">Review</span>
+                                    {% elif slot.category == "Workshop" %}
+                                        <span class="type-badge type-workshop">Workshop</span>
+                                    {% else %}
+                                        <span class="type-badge type-theory">{{ slot.category }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="type-badge type-theory">General</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -135,41 +389,46 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Prioritized Tasks -->
         {% if tasks %}
-        <div class="classic-card rounded-xl p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <span class="mr-2">📊</span>
-                Prioritized Study Materials
+        <div class="card-modern p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <span class="text-3xl">Prioritized Materials</span>
             </h2>
-            <div class="space-y-3">
+            <div class="space-y-6">
                 {% for task in tasks %}
-                <div class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition">
-                    <div class="flex items-start">
-                        <div class="priority-badge w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4 flex-shrink-0">
+                <div class="task-card p-6">
+                    <div class="flex gap-6">
+                        <div class="priority-badge flex-shrink-0">
                             {{ task.priority }}
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="font-bold text-lg text-gray-900 truncate">{{ task.file }}</h3>
-                                <div class="flex space-x-2 ml-4">
-                                    <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
-                                        {{ task.category|default:"general" }}
+                        <div class="flex-1">
+                            <div class="mb-4">
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">{{ task.file }}</h3>
+                                <div class="flex flex-wrap gap-3">
+                                    <span class="metric-badge">
+                                        {{ task.pages }} pages
                                     </span>
-                                    <span class="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-medium">
-                                        Level {{ task.complexity|default:5 }}/10
+                                    <span class="metric-badge">
+                                        {{ task.chunk_count }} sections
+                                    </span>
+                                    <span class="metric-badge">
+                                        ~{{ task.estimated_hours }}h
+                                    </span>
+                                    <span class="metric-badge">
+                                        Complexity: {{ task.complexity|default:5 }}/10
+                                    </span>
+                                    <span class="metric-badge">
+                                        Urgency: {{ task.urgency|default:5 }}/10
                                     </span>
                                 </div>
                             </div>
-                            <div class="flex space-x-4 text-sm text-gray-600 mb-3">
-                                <span>📄 {{ task.pages }} pages</span>
-                                <span>📦 {{ task.chunk_count }} sections</span>
-                                <span>⏱️ ~{{ task.estimated_hours }}h</span>
-                                <span>🔥 Urgency: {{ task.urgency|default:5 }}/10</span>
-                            </div>
-                            <div class="text-gray-700 leading-relaxed">
-                                <strong class="text-gray-900">AI Reasoning:</strong> {{ task.reason }}
+                            <div class="reasoning-container">
+                                <h4 class="font-semibold text-primary-dark mb-3 text-lg">AI Reasoning</h4>
+                                <div class="reasoning-text">
+                                    {{ task.reason|linebreaksbr }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -178,6 +437,92 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Generate Quiz & Rate Feedback -->
+        {% if tasks or schedule %}
+        <div class="card-modern p-8 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Generate Quiz -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 hover:border-blue-400 transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-blue-500 text-white p-3 rounded-lg">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Test Your Knowledge</h3>
+                            <p class="text-sm text-gray-600 mb-4">
+                                Take a 5-question quiz generated from this historical plan.
+                            </p>
+                            <form method="POST" action="{% url 'generate_quiz_auto' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="history_id" value="{{ stats.id|default:'' }}">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all hover:shadow-lg">
+                                    Generate Quiz →
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rate Feedback -->
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 hover:border-purple-400 transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-purple-500 text-white p-3 rounded-lg">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Rate This Plan</h3>
+                            <p class="text-sm text-gray-600 mb-4">
+                                Was this historical plan helpful? Let us know!
+                            </p>
+                            <div class="flex gap-3 flex-wrap">
+                                <form method="POST" action="{% url 'quick_feedback_auto' %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="thumbs_up" value="true">
+                                    <input type="hidden" name="history_id" value="{{ stats.id|default:'' }}">
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
+                                        Helpful
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'quick_feedback_auto' %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="thumbs_up" value="false">
+                                    <input type="hidden" name="history_id" value="{{ stats.id|default:'' }}">
+                                    <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
+                                        Not Helpful
+                                    </button>
+                                </form>
+                                <button onclick="openDetailedFeedbackPage()" 
+                                        class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
+                                    Detailed Feedback
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
+
+    <!-- Footer -->
+    <div class="gradient-primary text-white mt-16 py-8">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="text-sm">© 2024 StudyFlow AI - Intelligent Study Planning Platform</p>
+        </div>
+    </div>
+
+    <script>
+        function openDetailedFeedbackPage() {
+            const historyId = "{{ stats.id|default:'' }}";
+            const url = "{% url 'detailed_feedback_auto' %}";
+            window.location.href = historyId ? `${url}?history_id=${historyId}` : url;
+        }
+    </script>
 </body>
 </html>

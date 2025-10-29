@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trigger RL Adjustment - Admin - StudyFlow AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-primary {
+            background: linear-gradient(135deg, #0e244d 0%, #0b356c 100%);
+        }
+        
+        .card-white {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="gradient-primary text-white">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">🔄 Reinforcement Learning Control</h1>
+                    <p class="text-blue-100">Admin - Manual RL Adjustment Trigger</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{% url 'view_adjustments' %}" 
+                       class="bg-white text-blue-900 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-all">
+                        View Adjustments
+                    </a>
+                    <a href="{% url 'upload_page_optimized' %}" 
+                       class="bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-800 transition-all">
+                        Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto px-6 py-8">
+        <!-- Messages -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="mb-6 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-700{% elif message.tags == 'success' %}bg-green-50 border border-green-200 text-green-700{% elif message.tags == 'warning' %}bg-yellow-50 border border-yellow-200 text-yellow-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        <!-- RL Status Card -->
+        <div class="card-white mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Current Status</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="text-center p-6 bg-blue-50 rounded-lg">
+                    <div class="text-4xl font-bold text-blue-600">{{ unprocessed_count }}</div>
+                    <div class="text-sm text-gray-600 mt-2">Unprocessed Feedback</div>
+                </div>
+                
+                <div class="text-center p-6 bg-green-50 rounded-lg">
+                    <div class="text-4xl font-bold text-green-600">
+                        {% if unprocessed_count >= 10 %}✓{% else %}✗{% endif %}
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2">Ready to Trigger</div>
+                    <div class="text-xs text-gray-500 mt-1">(Need 10+ feedback)</div>
+                </div>
+                
+                <div class="text-center p-6 bg-purple-50 rounded-lg">
+                    <div class="text-4xl font-bold text-purple-600">Auto</div>
+                    <div class="text-sm text-gray-600 mt-2">Trigger Mode</div>
+                    <div class="text-xs text-gray-500 mt-1">(Triggers at 10)</div>
+                </div>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 class="font-bold text-blue-900 mb-3">ℹ️ How Reinforcement Learning Works:</h3>
+                <ul class="text-sm text-blue-800 space-y-2">
+                    <li>• Collects user feedback on study plan quality</li>
+                    <li>• Analyzes patterns in positive and negative feedback</li>
+                    <li>• Adjusts AI scoring weights to improve future prioritization</li>
+                    <li>• Learns from each user's preferences over time</li>
+                    <li>• Automatically triggers when 10+ unprocessed feedback items exist</li>
+                </ul>
+            </div>
+            
+            {% if unprocessed_count < 10 %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p class="text-yellow-800">
+                    <strong>⚠️ Not enough feedback yet.</strong> 
+                    Need at least 10 feedback items to trigger RL adjustment. 
+                    Current count: {{ unprocessed_count }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Trigger Form -->
+        <div class="card-white">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🚀 Manual Trigger</h2>
+            
+            <p class="text-gray-600 mb-6">
+                Click the button below to manually trigger the reinforcement learning adjustment process. 
+                This will process all unprocessed feedback and update the scoring model weights.
+            </p>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="flex gap-4">
+                    <button type="submit" 
+                            class="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 rounded-lg hover:shadow-lg transition-all {% if unprocessed_count < 10 %}opacity-50 cursor-not-allowed{% endif %}"
+                            {% if unprocessed_count < 10 %}disabled{% endif %}>
+                        {% if unprocessed_count >= 10 %}
+                            ✓ Trigger RL Adjustment Now
+                        {% else %}
+                            ✗ Not Enough Feedback ({{ unprocessed_count }}/10)
+                        {% endif %}
+                    </button>
+                    
+                    <a href="{% url 'view_adjustments' %}" 
+                       class="px-8 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 rounded-lg transition-all text-center">
+                        View History
+                    </a>
+                </div>
+            </form>
+            
+            {% if unprocessed_count < 10 %}
+            <p class="text-sm text-gray-500 mt-4 text-center">
+                You can still trigger manually, but results may not be statistically significant with less than 10 feedback items.
+            </p>
+            {% endif %}
+        </div>
+        
+        <!-- Warning -->
+        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-600">
+                <strong>Note:</strong> The RL system automatically triggers when 10+ unprocessed feedback items accumulate. 
+                Manual triggering is only needed for testing or immediate updates.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

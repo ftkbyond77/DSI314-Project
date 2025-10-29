@@ -1,0 +1,305 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz - Question {{ current_num }} - StudyFlow AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+        }
+        
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e244d 0%, #3b82f6 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .question-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            margin-top: 2rem;
+        }
+        
+        .option-button {
+            width: 100%;
+            text-align: left;
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .option-button:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .option-button.selected {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+            border-width: 3px;
+        }
+        
+        .option-letter {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #475569;
+            flex-shrink: 0;
+        }
+        
+        .option-button.selected .option-letter {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .nav-button {
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .nav-button-primary {
+            background: linear-gradient(135deg, #0e244d 0%, #3b82f6 100%);
+            color: white;
+        }
+        
+        .nav-button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(14, 36, 77, 0.2);
+        }
+        
+        .nav-button-secondary {
+            background: white;
+            color: #0e244d;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .nav-button-secondary:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .difficulty-easy {
+            background: #d1fae5;
+            color: #166534;
+        }
+        
+        .difficulty-medium {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+        
+        .difficulty-hard {
+            background: #fecaca;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Quiz Time! 📝</h1>
+            <p class="text-gray-600">Question {{ current_num }} of {{ total_questions }}</p>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="progress-bar mb-6">
+            <div class="progress-fill" style="width: {{ progress_percentage }}%"></div>
+        </div>
+        
+        <!-- Question Card -->
+        <div class="question-card">
+            <!-- Question Header -->
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-sm font-semibold text-gray-500">Question {{ current_num }}</span>
+                <span class="difficulty-badge difficulty-{{ current_question.difficulty_level }}">
+                    {{ current_question.difficulty_level|upper }}
+                </span>
+            </div>
+            
+            <!-- Question Text -->
+            <h2 class="text-2xl font-bold text-gray-800 mb-8">
+                {{ current_question.question_text }}
+            </h2>
+            
+            <!-- Options -->
+            <form id="quiz-form" method="post">
+                {% csrf_token %}
+                
+                <div class="space-y-4">
+                    <button type="button" 
+                            class="option-button {% if existing_answer == 'a' %}selected{% endif %}" 
+                            data-answer="a"
+                            onclick="selectOption('a')">
+                        <div class="option-letter">A</div>
+                        <div class="flex-1">{{ current_question.option_a }}</div>
+                    </button>
+                    
+                    <button type="button" 
+                            class="option-button {% if existing_answer == 'b' %}selected{% endif %}" 
+                            data-answer="b"
+                            onclick="selectOption('b')">
+                        <div class="option-letter">B</div>
+                        <div class="flex-1">{{ current_question.option_b }}</div>
+                    </button>
+                    
+                    <button type="button" 
+                            class="option-button {% if existing_answer == 'c' %}selected{% endif %}" 
+                            data-answer="c"
+                            onclick="selectOption('c')">
+                        <div class="option-letter">C</div>
+                        <div class="flex-1">{{ current_question.option_c }}</div>
+                    </button>
+                    
+                    <button type="button" 
+                            class="option-button {% if existing_answer == 'd' %}selected{% endif %}" 
+                            data-answer="d"
+                            onclick="selectOption('d')">
+                        <div class="option-letter">D</div>
+                        <div class="flex-1">{{ current_question.option_d }}</div>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Navigation Buttons -->
+            <div class="flex justify-between items-center mt-8 pt-6 border-t">
+                {% if not is_first %}
+                <a href="?q={{ current_num|add:'-1' }}" class="nav-button nav-button-secondary">
+                    ← Previous
+                </a>
+                {% else %}
+                <div></div>
+                {% endif %}
+                
+                {% if is_last %}
+                <form method="post" action="{% url 'submit_quiz' quiz_id=quiz_session.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-button nav-button-primary" onclick="return confirmSubmit()">
+                        Submit Quiz 🎯
+                    </button>
+                </form>
+                {% else %}
+                <a href="?q={{ current_num|add:'1' }}" class="nav-button nav-button-primary">
+                    Next →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Footer Info -->
+        <div class="text-center mt-6 text-sm text-gray-500">
+            <p>💡 Tip: You can navigate back to change your answers before submitting</p>
+        </div>
+    </div>
+    
+    <script>
+        let selectedAnswer = '{{ existing_answer|default:'' }}';
+        let questionStartTime = Date.now();
+        
+        function selectOption(answer) {
+            // Remove selected class from all
+            document.querySelectorAll('.option-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            event.target.closest('.option-button').classList.add('selected');
+            
+            selectedAnswer = answer;
+            
+            // Save answer via AJAX
+            saveAnswer(answer);
+        }
+        
+        async function saveAnswer(answer) {
+            const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+            
+            try {
+                const response = await fetch('{% url "submit_quiz_answer" quiz_id=quiz_session.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        question_number: {{ current_num }},
+                        answer: answer,
+                        time_spent: timeSpent
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('Answer saved');
+                }
+            } catch (error) {
+                console.error('Error saving answer:', error);
+            }
+        }
+        
+        function confirmSubmit() {
+            if (!selectedAnswer) {
+                return confirm('You haven\'t answered this question. Submit anyway?');
+            }
+            
+            return confirm('Ready to submit your quiz? You won\'t be able to change your answers after submission.');
+        }
+        
+        // Auto-save on navigation
+        window.addEventListener('beforeunload', () => {
+            if (selectedAnswer) {
+                saveAnswer(selectedAnswer);
+            }
+        });
+    </script>
+</body>
+</html>

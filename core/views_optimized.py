@@ -354,7 +354,8 @@ def result_page_optimized(request):
     return render(request, 'core/result_agentic.html', {
         'tasks': tasks,
         'schedule': schedule,
-        'stats': stats
+        'stats': stats,
+        'request': request
     })
 
 
@@ -402,7 +403,8 @@ def history_detail(request, history_id):
         'history': history,
         'tasks': tasks,
         'schedule': schedule,
-        'stats': stats
+        'stats': stats,
+        'request': request
     })
 
 
