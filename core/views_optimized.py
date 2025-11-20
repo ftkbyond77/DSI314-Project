@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from .models import Upload, Plan, Chunk, StudyPlanHistory
+from .models import Upload, Plan, Chunk, StudyPlanHistory, QuizSession  # Added QuizSession
 from .tasks import process_upload
 from .tasks_agentic_optimized import generate_optimized_plan_async
 from .agent_tools_advanced import ToolLogger
@@ -171,9 +171,15 @@ def upload_page_optimized(request):
         status='active'
     ).order_by('-created_at')[:10]
     
+    # NEW: Fetch Quiz History
+    quiz_history = QuizSession.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:20]
+    
     return render(request, 'core/upload.html', {
         'recent_uploads': user_uploads,
-        'history_plans': history_plans
+        'history_plans': history_plans,
+        'quiz_history': quiz_history  # Pass to template
     })
 
 

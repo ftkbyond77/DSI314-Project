@@ -29,16 +29,13 @@ urlpatterns = [
     path('logout/', views_optimized.logout_view, name='logout_view'),
     
     # ==================== QUIZ SYSTEM ====================
-    # Auto-detection route (finds latest plan automatically)
-    path('generate-quiz-auto/', views_quiz.generate_quiz_auto, name='generate_quiz_auto'),
-    
-    # Regular routes
-    path('generate-quiz/<int:plan_id>/', views_quiz.generate_quiz, name='generate_quiz'),
-    path('quiz/<int:quiz_id>/', views_quiz.quiz_test, name='quiz_test'),
-    path('quiz/<int:quiz_id>/submit-answer/', views_quiz.submit_quiz_answer, name='submit_quiz_answer'),
+    # path('generate-quiz-auto/', views_quiz.generate_quiz_specific_auto, name='generate_quiz_auto'),
+    path('quiz/generate/specific/', views_quiz.generate_quiz_specific_auto, name='generate_quiz_specific_auto'),
+    path('quiz/<int:quiz_id>/take/', views_quiz.quiz_test, name='quiz_test'),
     path('quiz/<int:quiz_id>/submit/', views_quiz.submit_quiz, name='submit_quiz'),
     path('quiz/<int:quiz_id>/results/', views_quiz.quiz_results, name='quiz_results'),
-    path('quiz-history/', views_quiz.quiz_history, name='quiz_history'),
+    path('quiz/history/', views_quiz.quiz_history, name='quiz_history'),
+    
     
     # ==================== FEEDBACK SYSTEM ====================
     # Auto-detection routes (finds latest plan automatically)

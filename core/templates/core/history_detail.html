@@ -455,7 +455,7 @@
                             <p class="text-sm text-gray-600 mb-4">
                                 Take a 5-question quiz generated from this historical plan.
                             </p>
-                            <form method="POST" action="{% url 'generate_quiz_auto' %}">
+                            <form method="POST" action="{% url 'generate_quiz_specific_auto' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="history_id" value="{{ stats.id|default:'' }}">
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all hover:shadow-lg">

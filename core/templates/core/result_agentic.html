@@ -19,408 +19,110 @@
             --gray-600: #475569;
             --gray-800: #1e293b;
         }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-        }
-        
-        .gradient-primary {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
-        }
-        
-        .gradient-accent {
-            background: linear-gradient(135deg, var(--primary-medium) 0%, var(--accent) 100%);
-        }
-        
-        .card-modern {
-            background: var(--white);
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            backdrop-filter: blur(10px);
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .priority-badge {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
-            color: white;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 24px;
-            box-shadow: 0 4px 6px -1px rgba(14, 36, 77, 0.2);
-        }
-        
-        .task-card {
-            background: var(--white);
-            border: 2px solid var(--gray-200);
-            border-radius: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .task-card:hover {
-            border-color: var(--primary-medium);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            transform: translateY(-4px);
-        }
-        
-        .reasoning-container {
-            background: linear-gradient(135deg, #f0f4ff 0%, #f8faff 100%);
-            border-left: 4px solid var(--primary-medium);
-            border-radius: 12px;
-            padding: 20px;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-        
-        .reasoning-text {
-            color: var(--gray-800);
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        
-        .reasoning-text h2, .reasoning-text h3 {
-            color: var(--primary-dark);
-            font-weight: 700;
-            margin-bottom: 12px;
-            margin-top: 16px;
-        }
-        
-        .reasoning-text ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        
-        .reasoning-text ul li {
-            padding-left: 24px;
-            margin-bottom: 8px;
-            position: relative;
-        }
-        
-        .reasoning-text ul li::before {
-            content: "•";
-            color: var(--primary-medium);
-            font-weight: bold;
-            position: absolute;
-            left: 8px;
-        }
-        
-        .reasoning-text strong {
-            color: var(--primary-dark);
-            font-weight: 600;
-        }
-        
-        .metric-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 12px;
-            background: var(--gray-100);
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--gray-700);
-            border: 1px solid var(--gray-200);
-        }
-        
-        .schedule-table {
-            overflow: hidden;
-            border-radius: 12px;
-            border: 1px solid var(--gray-200);
-        }
-        
-        .schedule-table thead {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
-            color: white;
-        }
-        
-        .schedule-table th {
-            padding: 16px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .schedule-table td {
-            padding: 16px;
-            border-top: 1px solid var(--gray-200);
-            font-size: 14px;
-        }
-        
-        .schedule-table tbody tr {
-            background: var(--white);
-            transition: background 0.2s ease;
-        }
-        
-        .schedule-table tbody tr:hover {
-            background: var(--gray-50);
-        }
-        
-        .type-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .type-theory {
-            background: linear-gradient(135deg, #ddd6fe 0%, #e9d5ff 100%);
-            color: #6b21a8;
-        }
-        
-        .type-practical {
-            background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 100%);
-            color: #1e40af;
-        }
-        
-        .type-exam {
-            background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%);
-            color: #991b1b;
-        }
-        
-        .type-assignment {
-            background: linear-gradient(135deg, #fed7aa 0%, #ffedd5 100%);
-            color: #9a3412;
-        }
-        
-        .type-review {
-            background: linear-gradient(135deg, #d1fae5 0%, #ecfccb 100%);
-            color: #166534;
-        }
-        
-        .type-workshop {
-            background: linear-gradient(135deg, #fde68a 0%, #fef3c7 100%);
-            color: #92400e;
-        }
-        
-        .ocr-banner {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
-            color: white;
-            padding: 12px 32px;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-block;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(14, 36, 77, 0.2);
-        }
-
-        /* Success Message - Classic & Simple */
-        .success-message {
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-            border-left: 4px solid #10b981;
-            border-radius: 8px;
-            padding: 14px 20px;
-            margin-bottom: 24px;
-            font-size: 15px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        .success-message svg {
-            width: 20px;
-            height: 20px;
-            flex-shrink: 0;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%); }
+        .gradient-primary { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%); }
+        .card-modern { background: var(--white); border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .stat-card { background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%); border: 1px solid var(--gray-200); border-radius: 12px; }
+        .priority-badge { width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%); color: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; }
+        .task-card { background: var(--white); border: 2px solid var(--gray-200); border-radius: 16px; transition: all 0.2s; }
+        .task-card:hover { border-color: var(--primary-medium); transform: translateY(-2px); }
+        .metric-badge { display: inline-flex; align-items: center; padding: 4px 12px; background: var(--gray-100); border-radius: 8px; font-size: 13px; color: var(--gray-700); border: 1px solid var(--gray-200); }
+        .schedule-table { overflow: hidden; border-radius: 12px; border: 1px solid var(--gray-200); }
+        .schedule-table th { padding: 16px; text-align: left; background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%); color: white; font-size: 14px; }
+        .schedule-table td { padding: 16px; border-top: 1px solid var(--gray-200); font-size: 14px; background: var(--white); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%); color: white; padding: 12px 32px; border-radius: 12px; font-weight: 600; }
+        .success-message { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-left: 4px solid #10b981; border-radius: 8px; padding: 14px 20px; margin-bottom: 24px; }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="gradient-primary text-white">
         <div class="max-w-7xl mx-auto px-6 py-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold mb-2">🎓 StudyFlow AI</h1>
+                    <h1 class="text-3xl font-bold mb-2">StudyFlow AI</h1>
                     <p class="text-blue-100">Your Intelligent Study Planning Assistant</p>
                 </div>
-                <a href="{% url 'upload_page_optimized' %}" 
-                   class="btn-primary">
-                    Create New Plan
-                </a>
+                <a href="{% url 'upload_page_optimized' %}" class="btn-primary">Create New Plan</a>
             </div>
         </div>
     </div>
     
-    <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-6 py-8">
-
         {% if request.GET.feedback == 'success' %}
         <div class="success-message">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>Thank you! Your feedback has been recorded.</span>
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <span>Thank you! Your feedback has been recorded.</span>
+            </div>
         </div>
         {% endif %}
 
-        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
-                <div class="mb-6 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-50 border-l-4 border-green-500 text-green-700{% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-700{% endif %}">
-                    {{ message }}
-                </div>
+                <div class="mb-6 p-4 rounded-lg bg-blue-50 text-blue-700 border border-blue-100">{{ message }}</div>
             {% endfor %}
         {% endif %}
         
-        <!-- Statistics Dashboard -->
         {% if stats %}
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div class="stat-card p-6 text-center">
-                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_files }}</div>
+                <div class="text-3xl font-bold text-slate-800">{{ stats.total_files }}</div>
                 <div class="text-sm text-gray-600 mt-2">Documents</div>
             </div>
             <div class="stat-card p-6 text-center">
-                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_pages }}</div>
+                <div class="text-3xl font-bold text-slate-800">{{ stats.total_pages }}</div>
                 <div class="text-sm text-gray-600 mt-2">Total Pages</div>
             </div>
             <div class="stat-card p-6 text-center">
-                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.total_hours }}h</div>
+                <div class="text-3xl font-bold text-slate-800">{{ stats.total_hours }}h</div>
                 <div class="text-sm text-gray-600 mt-2">Study Time</div>
             </div>
             <div class="stat-card p-6 text-center">
-                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.utilization|floatformat:0 }}%</div>
+                <div class="text-3xl font-bold text-slate-800">{{ stats.utilization|floatformat:0 }}%</div>
                 <div class="text-sm text-gray-600 mt-2">Time Utilized</div>
             </div>
             <div class="stat-card p-6 text-center">
-                <div class="text-3xl font-bold gradient-primary bg-clip-text text-transparent">{{ stats.sort_method|title }}</div>
+                <div class="text-3xl font-bold text-slate-800">{{ stats.sort_method|title }}</div>
                 <div class="text-sm text-gray-600 mt-2">Method Used</div>
-            </div>
-        </div>
-        
-        <!-- OCR Processing Banner -->
-        {% if stats.ocr_pages_processed %}
-        <div class="ocr-banner mb-8">
-            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
-            </svg>
-            <div>
-                <div class="font-semibold text-lg">OCR Processing Applied</div>
-                <div class="text-blue-100 text-sm">
-                    Automatically extracted text from {{ stats.ocr_pages_processed }} image-based pages using advanced OCR technology
-                </div>
             </div>
         </div>
         {% endif %}
         
-        <!-- Generation Info -->
+        {% if stats.ocr_pages_processed %}
+        <div class="ocr-banner mb-8">
+            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" /></svg>
+            <div><div class="font-semibold text-lg">OCR Processing Applied</div><div class="text-blue-100 text-sm">Automatically extracted text from {{ stats.ocr_pages_processed }} image-based pages.</div></div>
+        </div>
+        {% endif %}
+        
+        {% if stats %}
         <div class="card-modern p-6 mb-8">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full gradient-accent flex items-center justify-center">
-                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="font-semibold text-lg text-gray-800">Plan Generated Successfully</div>
-                        <div class="text-sm text-gray-600">{{ stats.generated_at|date:"F d, Y at H:i" }}</div>
-                    </div>
+                    <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center"><svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/></svg></div>
+                    <div><div class="font-semibold text-lg text-gray-800">Plan Generated Successfully</div><div class="text-sm text-gray-600">{{ stats.generated_at|date:"F d, Y at H:i" }}</div></div>
                 </div>
                 {% if stats.categories %}
-                <div class="flex gap-2">
-                    {% for cat, count in stats.categories.items %}
-                    <span class="metric-badge">{{ cat }} ({{ count }})</span>
-                    {% endfor %}
-                </div>
+                <div class="flex gap-2">{% for cat, count in stats.categories.items %}<span class="metric-badge">{{ cat }} ({{ count }})</span>{% endfor %}</div>
                 {% endif %}
             </div>
         </div>
         {% endif %}
         
-        <!-- Weekly Schedule Section -->
         {% if schedule %}
         <div class="card-modern p-8 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <span class="text-3xl">📅</span>
-                Optimized Weekly Schedule
-            </h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Optimized Weekly Schedule</h2>
             <div class="schedule-table">
                 <table class="w-full">
-                    <thead>
-                        <tr>
-                            <th>Day</th>
-                            <th>Time</th>
-                            <th>Task</th>
-                            <th>Duration</th>
-                            <th>Type</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Day</th><th>Time</th><th>Task</th><th>Duration</th><th>Type</th></tr></thead>
                     <tbody>
                         {% for slot in schedule %}
                         <tr>
-                            <td class="font-semibold text-gray-800">{{ slot.day }}</td>
-                            <td class="text-gray-700">{{ slot.time }}</td>
-                            <td class="text-gray-800">{{ slot.task }}</td>
-                            <td>
-                                <span class="font-semibold text-primary-dark">{{ slot.hours }}h</span>
-                            </td>
-                            <td>
-                                {% if slot.type %}
-                                    {% if slot.type == "Theory" %}
-                                        <span class="type-badge type-theory">Theory</span>
-                                    {% elif slot.type == "Practical" %}
-                                        <span class="type-badge type-practical">Practical</span>
-                                    {% elif slot.type == "Exam Prep" %}
-                                        <span class="type-badge type-exam">Exam Prep</span>
-                                    {% elif slot.type == "Assignment" %}
-                                        <span class="type-badge type-assignment">Assignment</span>
-                                    {% elif slot.type == "Review" %}
-                                        <span class="type-badge type-review">Review</span>
-                                    {% elif slot.type == "Workshop" %}
-                                        <span class="type-badge type-workshop">Workshop</span>
-                                    {% else %}
-                                        <span class="type-badge type-theory">{{ slot.type }}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="type-badge type-theory">Study</span>
-                                {% endif %}
-                            </td>
+                            <td class="font-semibold">{{ slot.day }}</td>
+                            <td>{{ slot.time }}</td>
+                            <td>{{ slot.task }}</td>
+                            <td><span class="font-semibold text-blue-800">{{ slot.hours }}h</span></td>
+                            <td><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-bold uppercase">{{ slot.type|default:"Study" }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -429,61 +131,37 @@
         </div>
         {% endif %}
         
-        <!-- Prioritized Tasks Section -->
         {% if tasks %}
         <div class="card-modern p-8 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <span class="text-3xl">📊</span>
-                Prioritized Study Materials with AI Reasoning
-            </h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Prioritized Study Materials</h2>
             <div class="space-y-6">
                 {% for task in tasks %}
                 <div class="task-card p-6">
                     <div class="flex gap-6">
-                        <!-- Priority Badge -->
-                        <div class="priority-badge flex-shrink-0">
-                            {{ task.priority }}
-                        </div>
-                        
-                        <!-- Task Content -->
+                        <div class="priority-badge flex-shrink-0">{{ task.priority }}</div>
                         <div class="flex-1">
-                            <!-- Task Header -->
-                            <div class="mb-4">
-                                <h3 class="text-xl font-bold text-gray-800 mb-2">{{ task.file }}</h3>
-                                <div class="flex flex-wrap gap-3">
-                                    <span class="metric-badge">
-                                        <svg class="w-4 h-4 mr-1 inline" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                        </svg>
-                                        {{ task.pages }} pages
-                                    </span>
-                                    <span class="metric-badge">
-                                        <svg class="w-4 h-4 mr-1 inline" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
-                                        </svg>
-                                        ~{{ task.estimated_hours }}h
-                                    </span>
-                                    <span class="metric-badge">
-                                        <svg class="w-4 h-4 mr-1 inline" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M15.07,11.25L14.17,12.17C13.45,12.89 13,13.5 13,15H11V14.5C11,13.39 11.45,12.39 12.17,11.67L13.41,10.41C13.78,10.05 14,9.55 14,9C14,7.89 13.1,7 12,7A2,2 0 0,0 10,9H8A4,4 0 0,1 12,5A4,4 0 0,1 16,9C16,9.88 15.64,10.67 15.07,11.25M13,19H11V17H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12C22,6.47 17.5,2 12,2Z"/>
-                                        </svg>
-                                        Complexity: {{ task.complexity|default:5 }}/10
-                                    </span>
-                                    <span class="metric-badge">
-                                        <svg class="w-4 h-4 mr-1 inline" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/>
-                                        </svg>
-                                        Urgency: {{ task.urgency|default:5 }}/10
-                                    </span>
+                            <div class="mb-4 flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-800 mb-2">{{ task.file|default:"Study Task" }}</h3>
+                                    <div class="flex flex-wrap gap-3">
+                                        <span class="metric-badge">{{ task.pages }} pages</span>
+                                        <span class="metric-badge">~{{ task.estimated_hours }}h</span>
+                                        <span class="metric-badge">Complexity: {{ task.complexity|default:5 }}/10</span>
+                                    </div>
                                 </div>
+                                
+                                <form method="POST" action="{% url 'generate_quiz_specific_auto' %}" class="ml-4">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="task_name" value="{{ task.file|default:'General Quiz' }}">
+                                    <button type="submit" class="group flex items-center gap-2 bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md">
+                                        <span class="font-semibold text-sm">Quiz Topic</span>
+                                    </button>
+                                </form>
                             </div>
                             
-                            <!-- AI Reasoning Section -->
-                            <div class="reasoning-container">
-                                <h4 class="font-semibold text-primary-dark mb-3 text-lg">🤖 AI Analysis & Reasoning</h4>
-                                <div class="reasoning-text">
-                                    {{ task.reason|linebreaksbr }}
-                                </div>
+                            <div class="bg-slate-50 border-l-4 border-blue-800 rounded-r-lg p-4">
+                                <h4 class="font-semibold text-blue-900 mb-1 text-sm uppercase">AI Analysis</h4>
+                                <div class="text-slate-700 text-sm leading-relaxed">{{ task.reason }}</div>
                             </div>
                         </div>
                     </div>
@@ -493,103 +171,48 @@
         </div>
         {% endif %}
         
-        <!-- Quiz and Feedback Action Buttons -->
         {% if tasks or schedule %}
         <div class="card-modern p-8 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Generate Quiz Button -->
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 hover:border-blue-400 transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="bg-blue-500 text-white p-3 rounded-lg">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Test Your Knowledge 📝</h3>
-                            <p class="text-sm text-gray-600 mb-4">
-                                Take a quick 5-question quiz generated from your study materials to test your understanding.
-                            </p>
-                            <!-- Hidden form for quiz generation -->
-                            <form id="quizForm" method="POST" action="{% url 'generate_quiz_auto' %}">
-                                {% csrf_token %}
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all hover:shadow-lg">
-                                    Generate Quiz →
-                                </button>
-                            </form>
-                        </div>
+                <div class="bg-white border border-gray-200 rounded-xl p-6 hover:border-blue-300 transition-all">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">General Knowledge Test</h3>
+                        <p class="text-sm text-gray-600 mb-4">Take a mixed quiz covering all materials.</p>
+                        <form method="POST" action="{% url 'generate_quiz_specific_auto' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="task_name" value="General Quiz">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md w-full">Start General Quiz</button>
+                        </form>
                     </div>
                 </div>
                 
-                <!-- Feedback Button -->
-                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 hover:border-purple-400 transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="bg-purple-500 text-white p-3 rounded-lg">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                            </svg>
+                <div class="bg-white border border-gray-200 rounded-xl p-6 hover:border-purple-300 transition-all">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Feedback</h3>
+                        <p class="text-sm text-gray-600 mb-4">Help us improve the system.</p>
+                        <div class="flex gap-3">
+                            <form method="POST" action="{% url 'quick_feedback_auto' %}" class="flex-1">{% csrf_token %}<input type="hidden" name="thumbs_up" value="true"><button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow-sm">Helpful</button></form>
+                            <form method="POST" action="{% url 'quick_feedback_auto' %}" class="flex-1">{% csrf_token %}<input type="hidden" name="thumbs_up" value="false"><button type="submit" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow-sm">Not Helpful</button></form>
                         </div>
-                        <div class="flex-1">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Rate This Plan 💭</h3>
-                            <p class="text-sm text-gray-600 mb-4">
-                                Help us improve! Rate this study plan and provide feedback to make our AI better.
-                            </p>
-                            <div class="flex gap-3 flex-wrap">
-                                <!-- Quick Thumbs Feedback -->
-                                <form method="POST" action="{% url 'quick_feedback_auto' %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="thumbs_up" value="true">
-                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
-                                        👍 Helpful
-                                    </button>
-                                </form>
-                                <form method="POST" action="{% url 'quick_feedback_auto' %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="thumbs_up" value="false">
-                                    <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
-                                        👎 Not Helpful
-                                    </button>
-                                </form>
-                                
-                                <!-- Detailed Feedback Link -->
-                                <button onclick="openDetailedFeedbackPage()" 
-                                        class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all hover:shadow-lg text-sm">
-                                    ⭐ Detailed Feedback
-                                </button>
-                            </div>
-                        </div>
+                        <button onclick="openDetailedFeedbackPage()" class="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow-sm">Detailed Feedback</button>
                     </div>
                 </div>
             </div>
         </div>
         {% endif %}
         
-        <!-- No Plan Fallback -->
         {% if not tasks and not schedule %}
         <div class="card-modern p-16 text-center">
-            <div class="text-6xl mb-6">📚</div>
             <h2 class="text-3xl font-bold text-gray-800 mb-4">No Study Plan Available</h2>
             <p class="text-gray-600 mb-8 text-lg">Upload your course materials to generate an AI-optimized study plan</p>
-            <a href="{% url 'upload_page_optimized' %}" 
-               class="btn-primary inline-block">
-                Get Started
-            </a>
+            <a href="{% url 'upload_page_optimized' %}" class="btn-primary inline-block">Get Started</a>
         </div>
         {% endif %}
     </div>
     
-    <!-- Footer -->
     <div class="gradient-primary text-white mt-16 py-8">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <p class="text-sm">© 2024 StudyFlow AI - Intelligent Study Planning Platform</p>
-        </div>
+        <div class="max-w-7xl mx-auto px-6 text-center"><p class="text-sm">© 2024 StudyFlow AI</p></div>
     </div>
-
-    <script>
-    // Simple function to redirect to detailed feedback page
-    function openDetailedFeedbackPage() {
-        window.location.href = "{% url 'detailed_feedback_auto' %}";
-    }
-    </script>
+    <script>function openDetailedFeedbackPage() { window.location.href = "{% url 'detailed_feedback_auto' %}"; }</script>
 </body>
 </html>

@@ -225,6 +225,10 @@ class QuizSession(models.Model):
     source_distribution = models.JSONField(default=dict, 
                                           help_text="Distribution of questions from uploaded files vs KB")
     
+    # track if this quiz is focused on a specific task/file    
+    focus_task_name = models.CharField(max_length=512, null=True, blank=True)
+    
+    
     def __str__(self):
         return f"Quiz for {self.user.username} - {self.study_plan.id} ({self.status})"
     

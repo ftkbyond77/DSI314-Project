@@ -204,14 +204,13 @@
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- Professional Header -->
     <div class="gradient-hero text-white">
         <div class="max-w-7xl mx-auto px-6 py-8">
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-3xl font-bold flex items-center gap-3">
-                        <span class="text-4xl">🎯</span>
-                        StudyFlow AI
+                        <span class="text-4xl">λ</span>
+                        T-Max
                     </h1>
                     <p class="text-blue-100 mt-1">Intelligent Study Planning Platform</p>
                 </div>
@@ -224,7 +223,6 @@
                 </div>
             </div>
             
-            <!-- Navigation Tabs -->
             <div class="flex gap-1 mt-8 border-b border-blue-800/30">
                 <button onclick="showTab('new')" id="tab-new" 
                         class="tab-modern active px-6 py-3 rounded-t-lg">
@@ -234,13 +232,15 @@
                         class="tab-modern px-6 py-3 rounded-t-lg">
                     My History
                 </button>
+                <button onclick="showTab('quizzes')" id="tab-quizzes" 
+                        class="tab-modern px-6 py-3 rounded-t-lg">
+                    Quiz History
+                </button>
             </div>
         </div>
     </div>
     
-    <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-6 -mt-8 pb-12 relative z-10">
-        <!-- Messages -->
         {% if messages %}
             {% for message in messages %}
                 <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border-l-4 border-red-500 text-red-700{% elif message.tags == 'success' %}bg-green-50 border-l-4 border-green-500 text-green-700{% elif message.tags == 'warning' %}bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700{% else %}bg-blue-50 border-l-4 border-blue-500 text-blue-700{% endif %}">
@@ -249,15 +249,12 @@
             {% endfor %}
         {% endif %}
         
-        <!-- Tab: Create New Plan -->
         <div id="content-new" class="tab-content">
             <form method="post" enctype="multipart/form-data" id="uploadForm">
                 {% csrf_token %}
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Main Column -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- Goal Setting -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">1</span>
@@ -272,7 +269,6 @@
                                    class="w-full p-4 input-modern">
                         </div>
                         
-                        <!-- Document Upload -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">2</span>
@@ -298,7 +294,6 @@
                             <div id="fileList" class="space-y-3 max-h-64 overflow-y-auto"></div>
                         </div>
                         
-                        <!-- Time Configuration -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">3</span>
@@ -346,9 +341,7 @@
                         </div>
                     </div>
                     
-                    <!-- Settings Column -->
                     <div class="space-y-6">
-                        <!-- Prioritization Method -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">4</span>
@@ -386,7 +379,6 @@
                             </div>
                         </div>
                         
-                        <!-- Constraints -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">5</span>
@@ -397,7 +389,6 @@
                                       class="w-full p-3 input-modern resize-none"></textarea>
                         </div>
                         
-                        <!-- Features -->
                         <div class="card-modern p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
                             <h3 class="font-semibold text-gray-800 mb-3">Platform Features</h3>
                             <div class="space-y-2">
@@ -410,7 +401,6 @@
                     </div>
                 </div>
                 
-                <!-- Submit Button -->
                 <div class="mt-8">
                     <button type="submit" id="submitBtn" disabled
                             class="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
@@ -420,7 +410,6 @@
             </form>
         </div>
         
-        <!-- Tab: History -->
         <div id="content-history" class="tab-content hidden">
             {% if history_plans %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -469,6 +458,47 @@
                 <button onclick="showTab('new')" 
                         class="btn-primary px-8 py-3">
                     Create Your First Plan
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="content-quizzes" class="tab-content hidden">
+            {% if quiz_history %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for quiz in quiz_history %}
+                <div class="history-card card-modern p-6" onclick="window.location.href='{% url 'quiz_results' quiz.id %}'">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="overflow-hidden">
+                            <h3 class="text-lg font-semibold text-gray-800 truncate" title="{{ quiz.focus_task_name|default:'General Quiz' }}">
+                                {{ quiz.focus_task_name|default:'General Quiz' }}
+                            </h3>
+                            <p class="text-sm text-gray-500">{{ quiz.created_at|date:"M d, H:i" }}</p>
+                        </div>
+                        {% if quiz.score is not None %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap {% if quiz.score >= 80 %}bg-green-100 text-green-800{% elif quiz.score >= 50 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ quiz.score|floatformat:0 }}%
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium whitespace-nowrap">Incomplete</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-4">
+                        <span class="text-sm text-gray-600">{{ quiz.total_questions }} Questions</span>
+                        <span class="text-blue-600 text-sm font-medium hover:underline">View Results →</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card-modern p-12 text-center">
+                <div class="text-6xl mb-4 animate-pulse-slow">📝</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">No Quizzes Taken Yet</h3>
+                <p class="text-gray-600 mb-6">Generate a study plan and take quizzes to track your progress.</p>
+                <button onclick="showTab('new')" 
+                        class="btn-primary px-8 py-3">
+                    Create Plan & Start Quiz
                 </button>
             </div>
             {% endif %}

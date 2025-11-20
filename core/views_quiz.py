@@ -1,397 +1,171 @@
-# core/views_quiz.py - Enhanced with Auto Plan Detection
+# core/views_quiz.py
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
+from django.utils import timezone
 
-import json
-from typing import Dict
-
-from .models import (
-    StudyPlanHistory, QuizSession, QuizQuestion, 
-    QuizAnswer, UserAnalytics
-)
-from .quiz_agent import generate_quiz_for_study_plan, grade_user_quiz
-
-
-# ==================== AUTO PLAN DETECTION ====================
+from .models import StudyPlanHistory, QuizSession, QuizQuestion, QuizAnswer
+from .quiz_agent import generate_quiz_for_study_plan
 
 @login_required
 @require_http_methods(["POST"])
-def generate_quiz_auto(request):
+def generate_quiz_specific_auto(request):
+    """
+    Auto-detects latest plan and generates a quiz for a SPECIFIC file/task.
+    """
     try:
+        task_name = request.POST.get('task_name')
+        
+        # Normalize task name: treat empty or "General Quiz" as None (All files)
+        if not task_name or task_name.strip() == "" or task_name == 'General Quiz':
+            task_name = None 
+
+        # Find latest active plan
         latest_plan = StudyPlanHistory.objects.filter(
             user=request.user,
             status='active'
         ).order_by('-created_at').first()
         
         if not latest_plan:
-            messages.error(request, "ไม่พบแผนการเรียน กรุณาสร้างก่อน")
+            messages.error(request, "No active study plan found. Please upload files first.")
             return redirect('upload_page_optimized')
+
+        # Define a search name for database lookup
+        search_name = task_name if task_name else "General Quiz"
         
-        request.session['latest_plan_id'] = latest_plan.id
-
-        return redirect('generate_quiz', plan_id=latest_plan.id)
-
-    except Exception as e:
-        messages.error(request, "เกิดข้อผิดพลาด")
-        return redirect('upload_page_optimized')
-
-# ==================== QUIZ GENERATION ====================
-
-
-# core/views_quiz.py
-
-@login_required
-@require_http_methods(["GET", "POST"])  
-def generate_quiz(request, plan_id):
-
-    try:
-        study_plan = get_object_or_404(
-            StudyPlanHistory,
-            id=plan_id,
-            user=request.user
-        )
-        
-        request.session['latest_plan_id'] = plan_id
-
+        # Check for existing incomplete quiz
         existing_quiz = QuizSession.objects.filter(
-            study_plan=study_plan,
+            study_plan=latest_plan,
             user=request.user,
-            status='generated'
+            focus_task_name=search_name,
+            status__in=['generated', 'in_progress']
         ).first()
 
         if existing_quiz:
             return redirect('quiz_test', quiz_id=existing_quiz.id)
 
+        # Generate new quiz
         questions_data = generate_quiz_for_study_plan(
-            study_plan=study_plan,
-            num_questions=5
+            study_plan=latest_plan,
+            num_questions=10,
+            focus_task_name=task_name
         )
 
         if not questions_data:
-            messages.error(request, "ไม่สามารถสร้างคำถามได้ ลองใหม่")
+            messages.error(request, "Could not generate quiz questions. No content available.")
             return redirect('result_page_optimized')
 
+        # Create Session
         quiz_session = QuizSession.objects.create(
-            study_plan=study_plan,
+            study_plan=latest_plan,
             user=request.user,
             total_questions=len(questions_data),
-            difficulty='mixed',
-            status='generated'
+            status='generated',
+            focus_task_name=search_name
         )
 
+        # Create Questions
         for q in questions_data:
             QuizQuestion.objects.create(quiz_session=quiz_session, **q)
-
-        study_plan.quiz_generated = True
-        study_plan.save(update_fields=['quiz_generated'])
-
-        print(f"Quiz {quiz_session.id} created via {'GET' if request.method == 'GET' else 'POST'}")
 
         return redirect('quiz_test', quiz_id=quiz_session.id)
 
     except Exception as e:
-        print(f"Error in generate_quiz: {e}")
-        messages.error(request, "เกิดข้อผิดพลาดในการสร้างแบบทดสอบ")
+        print(f"Error generating quiz: {e}")
+        messages.error(request, f"An error occurred: {str(e)}")
         return redirect('result_page_optimized')
 
-
-# ==================== QUIZ TEST PAGE ====================
 
 @login_required
 def quiz_test(request, quiz_id):
-    """
-    Display the quiz test page (Microsoft Form style).
-    Shows one question at a time.
-    """
+    quiz_session = get_object_or_404(QuizSession, id=quiz_id, user=request.user)
     
-    try:
-        # Get quiz session
-        quiz_session = get_object_or_404(
-            QuizSession,
-            id=quiz_id,
-            user=request.user
-        )
-        
-        # Mark as started if not already
-        if not quiz_session.started_at:
-            quiz_session.mark_started()
-        
-        # Get all questions
-        questions = quiz_session.questions.all().order_by('question_number')
-        
-        # Get current question from query param (default to 1)
-        current_question_num = int(request.GET.get('q', 1))
-        
-        # Ensure valid question number
-        if current_question_num < 1:
-            current_question_num = 1
-        elif current_question_num > questions.count():
-            current_question_num = questions.count()
-        
-        # Get current question
-        current_question = questions.filter(question_number=current_question_num).first()
-        
-        if not current_question:
-            messages.error(request, "Question not found.")
-            return redirect('result_page_optimized')
-        
-        # Get existing answer if any
-        existing_answer = QuizAnswer.objects.filter(
-            question=current_question,
-            user=request.user
-        ).first()
-        
-        context = {
-            'quiz_session': quiz_session,
-            'current_question': current_question,
-            'current_num': current_question_num,
-            'total_questions': questions.count(),
-            'existing_answer': existing_answer.user_answer if existing_answer else None,
-            'is_first': current_question_num == 1,
-            'is_last': current_question_num == questions.count(),
-            'progress_percentage': (current_question_num / questions.count()) * 100,
-        }
-        
-        return render(request, 'core/quiz_test.html', context)
-        
-    except Exception as e:
-        print(f"❌ Error loading quiz: {e}")
-        messages.error(request, f"Error loading quiz: {str(e)}")
-        return redirect('result_page_optimized')
-
-
-# ==================== QUIZ ANSWER SUBMISSION ====================
-
-@login_required
-@require_http_methods(["POST"])
-def submit_quiz_answer(request, quiz_id):
-    """
-    Submit answer for a single question.
-    AJAX endpoint for real-time answer submission.
-    """
+    if quiz_session.status == 'completed':
+        return redirect('quiz_results', quiz_id=quiz_session.id)
     
-    try:
-        data = json.loads(request.body)
-        question_number = data.get('question_number')
-        user_answer = data.get('answer', '').lower()
-        time_spent = data.get('time_spent', 0)
+    if not quiz_session.started_at:
+        quiz_session.started_at = timezone.now()
+        quiz_session.status = 'in_progress'
+        quiz_session.save()
         
-        # Get quiz and question
-        quiz_session = get_object_or_404(QuizSession, id=quiz_id, user=request.user)
-        question = get_object_or_404(
-            QuizQuestion,
-            quiz_session=quiz_session,
-            question_number=question_number
-        )
-        
-        # Check if answer exists
-        answer_obj, created = QuizAnswer.objects.update_or_create(
-            question=question,
-            user=request.user,
-            defaults={
-                'user_answer': user_answer,
-                'is_correct': (user_answer == question.correct_answer),
-                'time_spent_seconds': time_spent
-            }
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'is_correct': answer_obj.is_correct,
-            'message': 'Answer saved successfully'
-        })
-        
-    except Exception as e:
-        print(f"❌ Error submitting answer: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
+    questions = quiz_session.questions.all().order_by('question_number')
+    
+    return render(request, 'core/quiz_test.html', {
+        'quiz': quiz_session,
+        'questions': questions,
+        'task_name': quiz_session.focus_task_name or "General Quiz"
+    })
 
-
-# ==================== QUIZ COMPLETION ====================
 
 @login_required
 @require_http_methods(["POST"])
 def submit_quiz(request, quiz_id):
-    """
-    Complete the quiz and calculate final score.
-    Redirects to results page.
-    """
+    quiz_session = get_object_or_404(QuizSession, id=quiz_id, user=request.user)
+    questions = quiz_session.questions.all()
     
-    try:
-        # Get quiz session
-        quiz_session = get_object_or_404(
-            QuizSession,
-            id=quiz_id,
-            user=request.user
-        )
+    correct_count = 0
+    
+    for question in questions:
+        user_choice = request.POST.get(str(question.id))
         
-        # Get all questions and answers
-        questions = quiz_session.questions.all()
-        user_answers = {}
-        
-        for question in questions:
-            answer = QuizAnswer.objects.filter(
+        if user_choice:
+            is_correct = (user_choice.lower() == question.correct_answer.lower())
+            if is_correct:
+                correct_count += 1
+                
+            QuizAnswer.objects.create(
                 question=question,
-                user=request.user
-            ).first()
+                user=request.user,
+                user_answer=user_choice,
+                is_correct=is_correct
+            )
             
-            if answer:
-                user_answers[question.question_number] = answer.user_answer
-        
-        # Count correct answers
-        correct_count = QuizAnswer.objects.filter(
-            question__quiz_session=quiz_session,
-            user=request.user,
-            is_correct=True
-        ).count()
-        
-        # Update quiz session
-        quiz_session.correct_answers = correct_count
-        quiz_session.mark_completed()
-        
-        # Update user analytics
-        analytics, created = UserAnalytics.objects.get_or_create(user=request.user)
-        analytics.update_from_quiz(quiz_session)
-        
-        print(f"✅ Quiz {quiz_id} completed: {correct_count}/{questions.count()} correct")
-        
-        # Redirect to results
-        return redirect('quiz_results', quiz_id=quiz_id)
-        
-    except Exception as e:
-        print(f"❌ Error submitting quiz: {e}")
-        messages.error(request, f"Error submitting quiz: {str(e)}")
-        return redirect('quiz_test', quiz_id=quiz_id)
+    quiz_session.status = 'completed'
+    quiz_session.completed_at = timezone.now()
+    quiz_session.correct_answers = correct_count
+    quiz_session.score = (correct_count / quiz_session.total_questions) * 100 if quiz_session.total_questions > 0 else 0
+    quiz_session.save()
+    
+    return redirect('quiz_results', quiz_id=quiz_session.id)
 
-
-# ==================== QUIZ RESULTS PAGE ====================
 
 @login_required
 def quiz_results(request, quiz_id):
-    """
-    Display quiz results with score, explanations, and analysis.
-    """
+    quiz_session = get_object_or_404(QuizSession, id=quiz_id, user=request.user)
+    questions = quiz_session.questions.all().order_by('question_number')
     
-    try:
-        # Get quiz session
-        quiz_session = get_object_or_404(
-            QuizSession,
-            id=quiz_id,
-            user=request.user
-        )
+    results_data = []
+    for q in questions:
+        answer = QuizAnswer.objects.filter(question=q, user=request.user).first()
+        results_data.append({
+            'question': q,
+            'user_answer': answer.user_answer if answer else None,
+            'is_correct': answer.is_correct if answer else False,
+            'options': {
+                'a': q.option_a,
+                'b': q.option_b,
+                'c': q.option_c,
+                'd': q.option_d
+            }
+        })
         
-        # Get all questions with user answers
-        questions = quiz_session.questions.all().order_by('question_number')
-        
-        results_data = []
-        performance_by_difficulty = {
-            'easy': {'correct': 0, 'total': 0},
-            'medium': {'correct': 0, 'total': 0},
-            'hard': {'correct': 0, 'total': 0}
-        }
-        performance_by_topic = {}
-        
-        for question in questions:
-            # Get user answer
-            user_answer_obj = QuizAnswer.objects.filter(
-                question=question,
-                user=request.user
-            ).first()
-            
-            user_answer = user_answer_obj.user_answer if user_answer_obj else None
-            is_correct = user_answer_obj.is_correct if user_answer_obj else False
-            time_spent = user_answer_obj.time_spent_seconds if user_answer_obj else 0
-            
-            # Track performance
-            difficulty = question.difficulty_level
-            topic = question.source_topic
-            
-            performance_by_difficulty[difficulty]['total'] += 1
-            if is_correct:
-                performance_by_difficulty[difficulty]['correct'] += 1
-            
-            if topic not in performance_by_topic:
-                performance_by_topic[topic] = {'correct': 0, 'total': 0}
-            performance_by_topic[topic]['total'] += 1
-            if is_correct:
-                performance_by_topic[topic]['correct'] += 1
-            
-            # Get explanation for wrong answer
-            why_wrong = ""
-            if not is_correct and user_answer:
-                why_wrong = question.explanation_wrong.get(user_answer, "")
-            
-            results_data.append({
-                'question': question,
-                'user_answer': user_answer,
-                'is_correct': is_correct,
-                'time_spent': time_spent,
-                'why_wrong': why_wrong,
-                'options': {
-                    'a': question.option_a,
-                    'b': question.option_b,
-                    'c': question.option_c,
-                    'd': question.option_d
-                }
-            })
-        
-        # Generate feedback
-        score_pct = quiz_session.score or 0
-        if score_pct >= 90:
-            overall_feedback = "🎉 Outstanding! You demonstrated excellent mastery of the material."
-        elif score_pct >= 75:
-            overall_feedback = "👏 Great job! You have a strong understanding of most concepts."
-        elif score_pct >= 60:
-            overall_feedback = "👍 Good effort! You understand the basics but could benefit from review."
-        else:
-            overall_feedback = "💪 Keep studying! Focus on understanding the core concepts better."
-        
-        # Find weak areas
-        weak_topics = [
-            topic for topic, stats in performance_by_topic.items()
-            if stats['total'] > 0 and (stats['correct'] / stats['total']) < 0.6
-        ]
-        
-        context = {
-            'quiz_session': quiz_session,
-            'results_data': results_data,
-            'performance_by_difficulty': performance_by_difficulty,
-            'performance_by_topic': performance_by_topic,
-            'overall_feedback': overall_feedback,
-            'weak_topics': weak_topics,
-            'study_plan': quiz_session.study_plan,
-        }
-        
-        return render(request, 'core/result_quiz.html', context)
-        
-    except Exception as e:
-        print(f"❌ Error loading quiz results: {e}")
-        messages.error(request, f"Error loading results: {str(e)}")
-        return redirect('result_page_optimized')
+    return render(request, 'core/result_quiz.html', {
+        'quiz': quiz_session,
+        'results': results_data,
+        'score': quiz_session.correct_answers,
+        'total': quiz_session.total_questions,
+        'task_name': quiz_session.focus_task_name or "General Quiz"
+    })
 
-
-# ==================== QUIZ HISTORY ====================
 
 @login_required
 def quiz_history(request):
-    """
-    Display user's quiz history with scores and dates.
-    """
-    
     quizzes = QuizSession.objects.filter(
-        user=request.user,
-        status='completed'
-    ).select_related('study_plan').order_by('-completed_at')
+        user=request.user
+    ).order_by('-created_at')
     
-    context = {
+    return render(request, 'core/quiz_history.html', {
         'quizzes': quizzes
-    }
-    
-    return render(request, 'core/quiz_history.html', context)
+    })
