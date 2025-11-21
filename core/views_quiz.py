@@ -13,8 +13,11 @@ from .quiz_agent import generate_quiz_for_study_plan
 @require_http_methods(["POST"])
 def generate_quiz_specific_auto(request):
     """
-    Auto-detects latest plan and generates a quiz for a SPECIFIC file/task.
+    Auto-detects plan (specific history OR latest) and generates a quiz.
+    Prioritizes history_id if provided (for History Detail page).
     """
+    history_id = request.POST.get('history_id')  # Capture history_id from form
+    
     try:
         task_name = request.POST.get('task_name')
         
@@ -22,22 +25,32 @@ def generate_quiz_specific_auto(request):
         if not task_name or task_name.strip() == "" or task_name == 'General Quiz':
             task_name = None 
 
-        # Find latest active plan
-        latest_plan = StudyPlanHistory.objects.filter(
-            user=request.user,
-            status='active'
-        ).order_by('-created_at').first()
+        study_plan = None
+
+        # 1. Try to get specific history if ID provided (Fixes History Detail Issue)
+        if history_id:
+            study_plan = StudyPlanHistory.objects.filter(
+                id=history_id, 
+                user=request.user
+            ).first()
+
+        # 2. Fallback to latest active plan if no ID or ID invalid (For Result Page)
+        if not study_plan:
+            study_plan = StudyPlanHistory.objects.filter(
+                user=request.user,
+                status='active'
+            ).order_by('-created_at').first()
         
-        if not latest_plan:
-            messages.error(request, "No active study plan found. Please upload files first.")
+        if not study_plan:
+            messages.error(request, "No study plan found. Please upload files first.")
             return redirect('upload_page_optimized')
 
         # Define a search name for database lookup
         search_name = task_name if task_name else "General Quiz"
         
-        # Check for existing incomplete quiz
+        # Check for existing incomplete quiz for THIS specific plan
         existing_quiz = QuizSession.objects.filter(
-            study_plan=latest_plan,
+            study_plan=study_plan,
             user=request.user,
             focus_task_name=search_name,
             status__in=['generated', 'in_progress']
@@ -48,18 +61,21 @@ def generate_quiz_specific_auto(request):
 
         # Generate new quiz
         questions_data = generate_quiz_for_study_plan(
-            study_plan=latest_plan,
+            study_plan=study_plan,
             num_questions=10,
             focus_task_name=task_name
         )
 
         if not questions_data:
             messages.error(request, "Could not generate quiz questions. No content available.")
+            # Redirect back to History if we came from there
+            if history_id:
+                return redirect('history_detail', history_id=history_id)
             return redirect('result_page_optimized')
 
         # Create Session
         quiz_session = QuizSession.objects.create(
-            study_plan=latest_plan,
+            study_plan=study_plan,
             user=request.user,
             total_questions=len(questions_data),
             status='generated',
@@ -75,6 +91,10 @@ def generate_quiz_specific_auto(request):
     except Exception as e:
         print(f"Error generating quiz: {e}")
         messages.error(request, f"An error occurred: {str(e)}")
+        
+        # Smart Redirect: Go back to where the user came from
+        if history_id:
+            return redirect('history_detail', history_id=history_id)
         return redirect('result_page_optimized')
 
 

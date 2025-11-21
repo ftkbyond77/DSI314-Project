@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prioritization Task Concepts Showcase</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/litegraph.js@0.7.11/build/litegraph.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litegraph.js@0.7.11/css/litegraph.css">
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray: #6b7280;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0; padding: 0;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        nav {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        nav h1 { margin: 0; font-size: 1.5rem; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active { background: white; color: var(--primary); font-weight: bold; }
+        .container {
+            margin-top: 100px;
+            padding: 20px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .section {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+        .section.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from {opacity:0; transform:translateY(20px);} to {opacity:1; transform:none;} }
+
+        h2 { color: var(--primary); border-bottom: 3px solid #e0e7ff; padding-bottom: 10px; }
+
+        /* 1. Timeline / Gantt */
+        .gantt {
+            height: 400px;
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f1f5f9;
+            position: relative;
+            margin-top: 20px;
+        }
+        .gantt-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            border-bottom: 2px solid #cbd5e1;
+            padding: 10px 0;
+            display: flex;
+        }
+        .month { flex: 1; text-align: center; font-weight: bold; }
+        .gantt-task {
+            position: absolute;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 8px;
+            color: white;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            cursor: move;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+        }
+        .gantt-task:hover { transform: scale(1.05); z-index: 20; }
+        .gantt-task::after {
+            content: attr(data-info);
+            position: absolute;
+            top: 45px;
+            left: 0;
+            background: #1e293b;
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .gantt-task:hover::after { opacity: 1; }
+
+        /* 2. Priority Heatmap */
+        .heatmap {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 8px;
+            height: 500px;
+            margin-top: 20px;
+        }
+        .cell {
+            background: #e2e8f0;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .cell:hover { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .task-bubble {
+            position: absolute;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        .task-bubble:hover {
+            transform: scale(1.4);
+            z-index: 10;
+        }
+        .axis-label {
+            position: absolute;
+            font-weight: bold;
+            color: var(--gray);
+        }
+
+        /* 3. Mind Map */
+        #mindmap { width: 100%; height: 600px; border: 1px solid #e2e8f0; border-radius: 12px; margin-top: 20px; }
+
+        /* 4. Progressive Story */
+        .story {
+            max-width: 800px;
+            margin: 40px auto;
+            position: relative;
+        }
+        .step {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 40px 0;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s;
+        }
+        .step.visible { opacity: 1; transform: none; }
+        .step-number {
+            width: 60px; height: 60px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: -50px auto 20px;
+            box-shadow: 0 8px 20px rgba(99,102,241,0.4);
+        }
+        .next-btn {
+            padding: 12px 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+
+        /* 5. Hybrid Kanban */
+        .kanban {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+        .column {
+            min-width: 320px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .column h3 {
+            margin: 0 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #cbd5e1;
+            text-align: center;
+        }
+        .task-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            cursor: grab;
+            transition: all 0.3s;
+        }
+        .task-card:hover { transform: translateY(-4px); }
+        .task-card.dragging { opacity: 0.5; transform: rotate(5deg); }
+        .badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .kb { background: #dbeafe; color: #4338ca; }
+        .llm { background: #fef3c7; color: #92400e; }
+        .effort { background: #fee2e2; color: #991b1b; }
+        .sparkline { height: 30px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h1><i class="fas fa-tasks"></i> Prioritization Task Concepts Showcase</h1>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="1">1. Timeline / Gantt</button>
+        <button class="tab-btn" data-tab="2">2. Priority Heatmap</button>
+        <button class="tab-btn" data-tab="3">3. Mind Map</button>
+        <button class="tab-btn" data-tab="4">4. Progressive Story</button>
+        <button class="tab-btn" data-tab="5">5. Hybrid Kanban</button>
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- 1. Timeline / Gantt -->
+    <div id="tab1" class="section active">
+        <h2>1. Timeline / Gantt-like Interactive View</h2>
+        <p>เหมาะกับงานที่มีลำดับหรือ dependency ชัดเจน • ลากปรับวันเริ่ม-สิ้นสุดได้ • คลิกดูรายละเอียด</p>
+        <div class="gantt-header">
+            <div class="month">พ.ย. 2025</div>
+            <div class="month">ธ.ค. 2025</div>
+            <div class="month">ม.ค. 2026</div>
+            <div class="month">ก.พ. 2026</div>
+            <div class="month">มี.ค. 2026</div>
+        </div>
+        <div class="gantt" id="gantt">
+            <div class="gantt-task" style="left:5%; width:25%; top:40px;" data-info="Task A • Dependency: None • Effort: 12 วัน">Task A - Research</div>
+            <div class="gantt-task" style="left:30%; width:30%; top:100px;" data-info="Task B • ขึ้นกับ Task A • มี KB 80%">Task B - Design System</div>
+            <div class="gantt-task" style="left:20%; width:40%; top:160px; background:#10b981;" data-info="Task C • Critical Path">Task C - Core Feature</div>
+            <div class="gantt-task" style="left:60%; width:20%; top:220px; background:#f59e0b;" data-info="Task D • หลัง Core เท่านั้น">Task D - Testing Phase</div>
+        </div>
+    </div>
+
+    <!-- 2. Priority Heatmap -->
+    <div id="tab2" class="section">
+        <h2>2. Priority Heatmap / Eisenhower Matrix</h2>
+        <p>แกน X = Urgency • แกน Y = Importance • ขนาดวงกลม = Value • สี = Complexity</p>
+        <div style="position:relative;">
+            <div class="axis-label" style="top:10px; left:50%; transform:translateX(-50%)">Urgency →</div>
+            <div class="axis-label" style="top:50%; left:-50px; transform:translateY(-50%) rotate(-90deg)">Importance ↑</div>
+            <div class="heatmap">
+                <!-- 25 cells -->
+                <div class="cell"><div class="task-bubble" style="width:80px;height:80px;top:10%;left:10%;background:#ef4444">1</div></div>
+                <div class="cell"><div class="task-bubble" style="width:60px;height:60px;top:30%;left:40%;background:#f59e0b">2</div></div>
+                <div class="cell"><div class="task-bubble" style="width:90px;height:90px;top:5%;left:20%;background:#ef4444">3</div></div>
+                <div class="cell"></div>
+                <div class="cell"><div class="task-bubble" style="width:40px;height:40px;top:50%;left:30%;background:#10b981">4</div></div>
+                <!-- เพิ่มเติมตามต้องการ -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Mind Map -->
+    <div id="tab3" class="section">
+        <h2>3. Mind Map / Knowledge Graph</h2>
+        <p>เห็นความสัมพันธ์ระหว่าง Task • Dependency • Similarity • Knowledge Base Connection</p>
+        <div id="mindmap"></div>
+    </div>
+
+    <!-- 4. Progressive Story -->
+    <div id="tab4" class="section">
+        <h2>4. Progressive Story / Guided Walkthrough</h2>
+        <p>เหมือนเรียนรู้ไปทีละขั้น • เหมาะกับการอธิบาย reasoning ที่ซับซ้อน</p>
+        <div class="story">
+            <div class="step" id="step1">
+                <div class="step-number">1</div>
+                <h3>ทำไมเราต้องทำ Feature นี้ก่อน?</h3>
+                <p>จากข้อมูล Knowledge Base พบว่า 80% ของผู้ใช้ติดปัญหาตรงนี้ • มีการ mention ใน feedback มากกว่า 400 ครั้งใน 3 เดือนที่ผ่านมา</p>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-number">2</div>
+                <h3>LLM บอกว่าความซับซ้อนอยู่ที่ระดับ 6/10</h3>
+                <p>แต่มีโค้ดตัวอย่างใน KB ถึง 3 repos ที่คล้ายกัน • สามารถ reuse pattern ได้ถึง 60%</p>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-number">3</div>
+                <h3>สรุป Priority Score = 92/100</h3>
+                <p>จึงควรทำเป็น Sprint แรก และ assign ให้ทีมที่มีประสบการณ์กับ domain นี้</p>
+            </div>
+            <button class="next-btn" id="nextBtn">ต่อไป →</button>
+        </div>
+    </div>
+
+    <!-- 5. Hybrid Kanban -->
+    <div id="tab5" class="section">
+        <h2>5. Hybrid Kanban + Visual Analytics</h2>
+        <p>ผสม Kanban ปกติ แต่เพิ่มข้อมูลเชิงวิเคราะห์เข้าไปใน card</p>
+        <div class="kanban">
+            <div class="column">
+                <h3>To Do (12)</h3>
+                <div class="task-card" data-task="t1">
+                    <strong>Login with SSO</strong>
+                    <div class="badges">
+                        <span class="badge kb">KB 85%</span>
+                        <span class="badge llm">LLM 15%</span>
+                        <span class="badge effort">Effort: High</span>
+                    </div>
+                    <canvas class="sparkline" id="spark1"></canvas>
+                </div>
+                <div class="task-card" data-task="t2">
+                    <strong>Dark Mode UI</strong>
+                    <div class="badges">
+                        <span class="badge kb">KB 30%</span>
+                        <span class="badge llm">LLM 70%</span>
+                        <span class="badge effort">Effort: Low</span>
+                    </div>
+                    <canvas class="sparkline" id="spark2"></canvas>
+                </div>
+            </div>
+            <div class="column">
+                <h3>In Progress (5)</h3>
+                <div class="task-card">Search Optimization</div>
+            </div>
+            <div class="column">
+                <h3>Review (3)</h3>
+            </div>
+            <div class="column">
+                <h3>Done (8)</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab' + btn.dataset.tab).classList.add('active');
+    });
+});
+
+// 1. Gantt drag
+interact('.gantt-task').draggable({
+    inertia: true,
+    restrict: { restriction: '.gantt', elementRect: { left: 0, right: 1, top: 0, bottom: 1 } },
+    onmove: function(e) {
+        let target = e.target;
+        let x = (parseFloat(target.getAttribute('data-x')) || 0) + e.dx;
+        target.style.transform = `translateX(${x}px)`;
+        target.setAttribute('data-x', x);
+    }
+});
+
+// 3. Mind Map with LiteGraph
+const graph = new LGraph();
+const canvas = new LGraphCanvas("#mindmap", graph);
+
+const node1 = LiteGraph.createNode("basic/const");
+node1.pos = [200, 200];
+node1.setValue("Core Payment");
+graph.add(node1);
+
+const node2 = LiteGraph.createNode("basic/watch");
+node2.pos = [500, 100];
+node2.title = "Fraud Detection";
+graph.add(node2);
+
+graph.connect(0, 0, 1, 0);
+graph.start();
+
+// 4. Progressive Story
+let currentStep = 0;
+const steps = document.querySelectorAll('.step');
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (currentStep < steps.length) {
+        steps[currentStep].classList.add('visible');
+        currentStep++;
+        if (currentStep >= steps.length) {
+            document.getElementById('nextBtn').style.display = 'none';
+        }
+    }
+});
+
+// 5. Kanban drag-drop
+interact('.task-card').draggable({
+    inertia: true,
+    onstart: function(e) { e.target.classList.add('dragging'); },
+    onend: function(e) { e.target.classList.remove('dragging'); }
+});
+
+// Sparklines
+new Chart(document.getElementById('spark1'), {
+    type: 'line',
+    data: { labels: ['','','','','',''], datasets: [{ data: [3,7,5,9,6,10], borderColor: '#ef4444', tension: 0.4, pointRadius: 0 }] },
+    options: { plugins: { legend: {display:false} }, scales: { x:{display:false}, y:{display:false} } }
+});
+new Chart(document.getElementById('spark2'), {
+    type: 'line',
+    data: { labels: ['','','','','',''], datasets: [{ data: [8,6,7,5,8,4], borderColor: '#10b981', tension: 0.4, pointRadius: 0 }] },
+    options: { plugins: { legend: {display:false} }, scales: { x:{display:false}, y:{display:false} } }
+});
+</script>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from .models import Upload, Plan, Chunk, StudyPlanHistory, QuizSession  # Added QuizSession
+from .models import Upload, Plan, Chunk, StudyPlanHistory, QuizSession
 from .tasks import process_upload
 from .tasks_agentic_optimized import generate_optimized_plan_async
 from .agent_tools_advanced import ToolLogger
@@ -30,6 +30,30 @@ def safe_int(value, default=0):
         return int(value)
     except (ValueError, TypeError):
         return default
+
+def _bucket_tasks_kanban(tasks):
+    """Helper to bucket tasks into High Quality, Back Log, and Validated"""
+    columns = {
+        'high_quality': [],
+        'back_log': [],
+        'validated': []  # for user validation
+    }
+    
+    # Sort by priority first
+    tasks_sorted = sorted(tasks, key=lambda x: x.get('priority', 999))
+    
+    for task in tasks_sorted:
+        priority = task.get('priority', 999)
+        urgency = task.get('urgency', 0)
+        
+        # Logic: Priorities 1-5 OR Very High Urgency goes to High Quality
+        # Everything else goes to Back Log
+        if priority <= 5 or urgency >= 8:
+            columns['high_quality'].append(task)
+        else:
+            columns['back_log'].append(task)
+            
+    return columns
 
 @login_required
 def upload_page_optimized(request):
@@ -171,7 +195,6 @@ def upload_page_optimized(request):
         status='active'
     ).order_by('-created_at')[:10]
     
-    # NEW: Fetch Quiz History
     quiz_history = QuizSession.objects.filter(
         user=request.user
     ).order_by('-created_at')[:20]
@@ -179,7 +202,7 @@ def upload_page_optimized(request):
     return render(request, 'core/upload.html', {
         'recent_uploads': user_uploads,
         'history_plans': history_plans,
-        'quiz_history': quiz_history  # Pass to template
+        'quiz_history': quiz_history 
     })
 
 
@@ -266,6 +289,10 @@ def result_page_optimized(request):
             else:
                 tasks.append(item)
         
+        # --- NEW KANBAN LOGIC ---
+        kanban_columns = _bucket_tasks_kanban(tasks)
+        # ------------------------
+        
         total_files = len(tasks)
         total_chunks = sum(p.get('chunk_count', 0) for p in tasks)
         total_pages = sum(p.get('pages', 0) for p in tasks)
@@ -281,6 +308,7 @@ def result_page_optimized(request):
             category_counts[cat] = category_counts.get(cat, 0) + 1
         
         stats = {
+            'plan_id': latest_plan.id,
             'total_files': total_files,
             'total_chunks': total_chunks,
             'total_pages': total_pages,
@@ -329,11 +357,13 @@ def result_page_optimized(request):
         
     else:
         tasks = []
+        kanban_columns = {'high_quality': [], 'back_log': [], 'validated': []}
         schedule = None
         stats = None
     
     return render(request, 'core/result_agentic.html', {
         'tasks': tasks,
+        'kanban_columns': kanban_columns,
         'schedule': schedule,
         'stats': stats,
         'request': request
@@ -356,7 +386,12 @@ def history_detail(request, history_id):
     schedule = history.get_schedule()
     tasks = history.get_tasks()
     
+    # --- NEW KANBAN LOGIC ---
+    kanban_columns = _bucket_tasks_kanban(tasks)
+    # ------------------------
+    
     stats = {
+        'id': history.id,
         'total_files': history.total_files,
         'total_pages': history.total_pages,
         'total_chunks': history.total_chunks,
@@ -379,6 +414,7 @@ def history_detail(request, history_id):
     return render(request, 'core/history_detail.html', {
         'history': history,
         'tasks': tasks,
+        'kanban_columns': kanban_columns,
         'schedule': schedule,
         'stats': stats,
         'request': request

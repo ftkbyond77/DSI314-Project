@@ -1,0 +1,61 @@
+{% load static %}
+
+<div class="kanban-card group relative bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer mb-3"
+     onclick="openTaskModal(this)">
+    
+    <div class="reasoning-content hidden">
+        {{ task.reason|safe }}
+    </div>
+
+    <div class="meta-data hidden"
+         data-task-name="{{ task.file|default:'Study Task' }}"
+         data-priority="{{ task.priority }}"
+         data-pages="{{ task.pages }}"
+         data-hours="{{ task.estimated_hours }}"
+         data-complexity="{{ task.complexity }}">
+    </div>
+
+    <div class="flex justify-between items-start mb-3">
+        <div class="flex items-center gap-2">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm
+                {% if task.priority <= 3 %}bg-rose-100 text-rose-700
+                {% elif task.priority <= 6 %}bg-amber-100 text-amber-700
+                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                #{{ task.priority }}
+            </span>
+            {% if task.kb_confidence > 0.6 %}
+            <span class="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 flex items-center gap-1" title="High AI Confidence">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Verified
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <h4 class="font-bold text-slate-800 text-sm mb-3 line-clamp-2 leading-snug">
+        {{ task.file|default:"Untitled Task" }}
+    </h4>
+
+    <div class="grid grid-cols-2 gap-2 mb-3">
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Time</div>
+            <div class="text-xs font-bold text-slate-700">{{ task.estimated_hours }}h</div>
+        </div>
+        <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Pages</div>
+            <div class="text-xs font-bold text-slate-700">{{ task.pages }}</div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-2 mt-2">
+        <span class="text-[10px] text-slate-500 font-medium">Difficulty</span>
+        <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full 
+                {% if task.complexity >= 7 %}bg-rose-500
+                {% elif task.complexity >= 4 %}bg-amber-400
+                {% else %}bg-emerald-400{% endif %}"
+                style="width: {% widthratio task.complexity 10 100 %}%;">
+            </div>
+        </div>
+    </div>
+</div>

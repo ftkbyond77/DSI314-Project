@@ -1,36 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Quiz History</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History: {{ stats.generated_at|date:"M d, Y" }} - StudyFlow</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        :root { --primary-dark: #0f172a; --bg-canvas: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-canvas); }
+        .kanban-col { min-height: calc(100vh - 140px); }
+        .history-badge { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    </style>
 </head>
-<body class="bg-slate-50 font-sans">
-    <div class="max-w-4xl mx-auto px-6 py-10">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-bold text-slate-800">Quiz History</h1>
-            <a href="{% url 'upload_page_optimized' %}" class="text-blue-600 hover:underline">Back to Home</a>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    {% if messages %}
+    <div class="fixed top-20 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        {% for message in messages %}
+        <div x-data="{ show: true }" 
+             x-init="setTimeout(() => show = false, 5000)" 
+             x-show="show"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-x-8"
+             x-transition:enter-end="opacity-100 transform translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform translate-x-0"
+             x-transition:leave-end="opacity-0 transform translate-x-8"
+             class="pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border border-l-4 w-80 bg-white
+                {% if message.tags == 'error' %}border-l-red-500 text-slate-700{% else %}border-l-blue-500 text-slate-700{% endif %}">
+            
+            <div class="flex-shrink-0 mt-0.5">
+                {% if message.tags == 'error' %}
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {% else %}
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {% endif %}
+            </div>
+
+            <div class="flex-1">
+                <p class="text-sm font-medium leading-tight">{{ message }}</p>
+            </div>
+
+            <button @click="show = false" class="ml-auto text-slate-400 hover:text-slate-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            {% if quizzes %}
-            <table class="w-full text-left text-sm">
-                <thead class="bg-slate-100 text-slate-600 uppercase font-semibold">
-                    <tr><th class="p-4">Date</th><th class="p-4">Topic</th><th class="p-4">Score</th><th class="p-4">Action</th></tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for quiz in quizzes %}
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-4 text-slate-600">{{ quiz.created_at|date:"M d, Y" }}</td>
-                        <td class="p-4 font-medium text-slate-800">{{ quiz.focus_task_name|default:"General Quiz" }}</td>
-                        <td class="p-4">{% if quiz.score is not None %}{{ quiz.score|floatformat:0 }}%{% else %}Incomplete{% endif %}</td>
-                        <td class="p-4"><a href="{% url 'quiz_results' quiz.id %}" class="text-blue-600 hover:text-blue-800">View Results</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="p-8 text-center text-slate-500">No quizzes taken yet.</div>
-            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex-shrink-0 z-20 shadow-sm">
+        <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'upload_page_optimized' %}" class="bg-slate-100 hover:bg-slate-200 p-1.5 rounded-lg text-slate-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </a>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        Historical Plan
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full history-badge uppercase tracking-wide">Archived</span>
+                    </h1>
+                </div>
+            </div>
+            <div class="text-xs text-slate-500 font-medium">
+                Generated on {{ stats.generated_at|date:"F d, Y at H:i" }}
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div class="p-6 space-y-8">
+                
+                <section>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">History Overview</h2>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <div class="text-2xl font-bold text-slate-800">{{ stats.total_files }}</div>
+                            <div class="text-xs text-slate-500 font-medium">Files</div>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <div class="text-2xl font-bold text-slate-800">{{ stats.total_hours }}h</div>
+                            <div class="text-xs text-slate-500 font-medium">Study Time</div>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 col-span-2">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                <div class="text-xs text-slate-500 font-medium uppercase">Original Goal</div>
+                            </div>
+                            <div class="text-sm font-bold text-slate-800 italic">"{{ stats.user_goal }}"</div>
+                        </div>
+                    </div>
+
+                    {% if stats.utilization > 0 %}
+                    <div class="mb-2 flex justify-between text-xs font-medium text-slate-500">
+                        <span>Original Schedule Utilization</span>
+                        <span>{{ stats.utilization|floatformat:0 }}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                        <div class="bg-purple-600 h-1.5 rounded-full" style="width: {{ stats.utilization }}%"></div>
+                    </div>
+                    {% endif %}
+                </section>
+
+                <hr class="border-slate-100">
+
+                <section>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Historical Assessment</h2>
+                    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl border border-purple-100">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="bg-white p-2 rounded-lg shadow-sm text-purple-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <h3 class="font-bold text-purple-900 text-sm">Review this Topic</h3>
+                        </div>
+                        <p class="text-xs text-purple-700 mb-4 leading-relaxed">
+                            Generate a quiz specifically based on this historical plan's materials.
+                        </p>
+                        
+                        <form method="POST" action="{% url 'generate_quiz_specific_auto' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="history_id" value="{{ stats.id }}">
+                            <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                                Generate History Quiz
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <hr class="border-slate-100">
+
+                <section>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Rate This History</h2>
+                    
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <form method="POST" action="{% url 'quick_feedback_auto' %}" class="flex-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="thumbs_up" value="true">
+                                <input type="hidden" name="history_id" value="{{ stats.id }}">
+                                <button class="w-full py-2 bg-white border border-slate-200 hover:border-emerald-400 hover:text-emerald-600 text-slate-600 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 group">
+                                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>
+                                    Helpful
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'quick_feedback_auto' %}" class="flex-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="thumbs_up" value="false">
+                                <input type="hidden" name="history_id" value="{{ stats.id }}">
+                                <button class="w-full py-2 bg-white border border-slate-200 hover:border-rose-400 hover:text-rose-600 text-slate-600 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 group">
+                                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l2.94 1.148c.594.232.969.832.895 1.47l-.766 6.136c-.066.528-.487.954-1.016 1.056L17 13m-7 1v7a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"></path></svg>
+                                    Not Helpful
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <button onclick="window.location.href='{% url 'detailed_feedback_auto' %}?history_id={{ stats.id }}'" class="w-full py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">
+                            Provide Detailed Rating
+                        </button>
+                    </div>
+                </section>
+                
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50/50 p-6">
+            <div class="h-full flex gap-6 min-w-max">
+                
+                <div class="w-96 flex-shrink-0 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm shadow-rose-200"></span>
+                            <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">High Quality</h3>
+                        </div>
+                        <span class="bg-rose-50 text-rose-700 text-xs font-bold px-2.5 py-1 rounded-full border border-rose-100">{{ kanban_columns.high_quality|length }}</span>
+                    </div>
+                    <div class="flex-1 bg-slate-100/50 rounded-2xl p-3 overflow-y-auto kanban-col border border-slate-200/50">
+                        {% for task in kanban_columns.high_quality %}
+                            {% include 'core/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="flex flex-col items-center justify-center h-40 text-center text-slate-400">
+                                <p class="text-sm font-medium">No high priority items found</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="w-96 flex-shrink-0 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-slate-400 shadow-sm"></span>
+                            <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">Back Log</h3>
+                        </div>
+                        <span class="bg-white text-slate-600 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-200">{{ kanban_columns.back_log|length }}</span>
+                    </div>
+                    <div class="flex-1 bg-slate-100/50 rounded-2xl p-3 overflow-y-auto kanban-col border border-slate-200/50">
+                        {% for task in kanban_columns.back_log %}
+                            {% include 'core/includes/kanban_card.html' with task=task %}
+                        {% empty %}
+                            <div class="flex flex-col items-center justify-center h-40 text-center text-slate-400">
+                                <p class="text-sm font-medium">Backlog is empty</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if schedule %}
+                <div class="w-96 flex-shrink-0 flex flex-col h-full ml-2 border-l border-slate-200 pl-6">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Historical Schedule
+                        </h3>
+                    </div>
+                    <div class="flex-1 bg-white rounded-2xl p-4 overflow-y-auto border border-slate-200 shadow-sm">
+                        <div class="space-y-4">
+                        {% for slot in schedule %}
+                            <div class="flex gap-3 text-sm border-b border-slate-50 pb-3 last:border-0 group">
+                                <div class="w-12 font-bold text-slate-400 text-xs py-1 group-hover:text-purple-500 transition-colors">{{ slot.day|slice:":3" }}</div>
+                                <div class="flex-1">
+                                    <div class="font-semibold text-slate-700">{{ slot.task }}</div>
+                                    <div class="text-slate-500 text-xs mt-0.5">{{ slot.time }} • {{ slot.hours }}h</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </main>
+    </div>
+
+    <div id="taskModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeTaskModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div id="modalPriorityBadge" class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">#1</div>
+                        <h3 class="text-lg font-bold text-slate-800 leading-6" id="modalTitle">Task Title</h3>
+                    </div>
+                    <button type="button" class="text-slate-400 hover:text-slate-600" onclick="closeTaskModal()">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                            <div class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Time</div>
+                            <div class="text-xl font-bold text-slate-800"><span id="modalHours">0</span>h</div>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                            <div class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Pages</div>
+                            <div class="text-xl font-bold text-slate-800" id="modalPages">0</div>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                            <div class="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Complexity</div>
+                            <div class="text-xl font-bold text-slate-800"><span id="modalComplexity">0</span>/10</div>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            AI Strategy Reasoning
+                        </h4>
+                        <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-slate-700 text-sm leading-relaxed" id="modalReason">Loading...</div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+                    <button type="button" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50" onclick="closeTaskModal()">Close</button>
+                    
+                    <form method="POST" action="{% url 'generate_quiz_specific_auto' %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="task_name" id="modalQuizTaskInput">
+                        <input type="hidden" name="history_id" value="{{ stats.id }}">
+                        <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors shadow-sm">
+                            Generate Quiz for Task
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <script>
+        function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
+        function openTaskModal(card) {
+            document.getElementById('modalTitle').textContent = card.dataset.taskName;
+            document.getElementById('modalPriorityBadge').textContent = '#' + card.dataset.priority;
+            document.getElementById('modalHours').textContent = card.dataset.hours;
+            document.getElementById('modalPages').textContent = card.dataset.pages;
+            document.getElementById('modalComplexity').textContent = card.dataset.complexity;
+            document.getElementById('modalReason').textContent = card.dataset.reason;
+            document.getElementById('modalQuizTaskInput').value = card.dataset.taskName;
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
