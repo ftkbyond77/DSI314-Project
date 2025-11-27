@@ -608,14 +608,15 @@
         const introModalContent = document.getElementById('introModalContent');
 
         function showIntroModal() {
-            if (!localStorage.getItem('hasSeenIntro_v1')) {
+            // Check sessionStorage instead of localStorage so it persists only for the current tab session
+            if (!sessionStorage.getItem('hasSeenIntro_session_v1')) {
                 introModal.classList.remove('hidden');
-                // Small delay to allow display:block to apply before opacity transition
+                // Increased delay slightly to 50ms to ensure the display transition renders correctly
                 setTimeout(() => {
                     introModal.classList.remove('opacity-0');
                     introModalContent.classList.remove('scale-95', 'opacity-0');
                     introModalContent.classList.add('scale-100', 'opacity-100');
-                }, 10);
+                }, 50);
             }
         }
 
@@ -626,9 +627,10 @@
             
             setTimeout(() => {
                 introModal.classList.add('hidden');
-            }, 300); // Match duration
+            }, 300); // Match CSS transition duration
             
-            localStorage.setItem('hasSeenIntro_v1', 'true');
+            // Set flag in sessionStorage (clears when tab/browser is closed)
+            sessionStorage.setItem('hasSeenIntro_session_v1', 'true');
         }
 
         // Close on click outside
@@ -669,7 +671,6 @@
         // Allow clicking tabs from anywhere (e.g. history cards)
         window.showTab = showTab;
 
-        // === ALL YOUR EXISTING JS BELOW (file handling, time calc, etc.) ===
         // Radio button styling
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -694,7 +695,7 @@
             window.location.href = `/history/${planId}/`;
         }
 
-        // === File handling & time calculation (unchanged) ===
+        // File handling & time calculation
         let selectedFiles = [];
         const fileInput = document.getElementById('fileInput');
         const addFilesBtn = document.getElementById('addFilesBtn');
