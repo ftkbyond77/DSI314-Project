@@ -20,12 +20,12 @@ def update_knowledge_base_stats():
     Refresh all KB statistics and caches.
     Run after batch document uploads.
     """
-    print("🔄 Updating knowledge base statistics...")
+    print("Updating knowledge base statistics...")
     
     try:
         stats = refresh_knowledge_base_cache()
         
-        print(f"✅ KB statistics updated:")
+        print(f"   KB statistics updated:")
         print(f"   Categories: {stats['category_system']['total_categories']}")
         print(f"   Tracked stats: {stats['statistics']['categories_tracked']}")
         
@@ -36,7 +36,7 @@ def update_knowledge_base_stats():
         }
         
     except Exception as e:
-        print(f"❌ KB stats update failed: {e}")
+        print(f"KB stats update failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -46,7 +46,7 @@ def discover_new_categories():
     Force category discovery from KB.
     Run weekly to find new categories.
     """
-    print("🔍 Discovering new categories...")
+    print("Discovering new categories...")
     
     try:
         mapper = SchemaHandler.get_category_mapper()
@@ -56,7 +56,7 @@ def discover_new_categories():
         
         categories = mapper.get_all_categories()
         
-        print(f"✅ Discovery complete:")
+        print(f"   Discovery complete:")
         print(f"   Total categories: {len(categories)}")
         
         return {
@@ -67,7 +67,7 @@ def discover_new_categories():
         }
         
     except Exception as e:
-        print(f"❌ Category discovery failed: {e}")
+        print(f"Category discovery failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -77,7 +77,7 @@ def analyze_kb_distribution():
     Analyze KB distribution and detect imbalances.
     Uses dynamic statistics engine.
     """
-    print("📊 Analyzing KB distribution...")
+    print("Analyzing KB distribution...")
     
     try:
         stats_engine = KnowledgeStatisticsEngine(namespace="knowledge_base")
@@ -137,7 +137,7 @@ def analyze_kb_distribution():
                     "current_count": item['count']
                 })
         
-        print(f"✅ Distribution analysis complete")
+        print(f"   Distribution analysis complete")
         print(f"   Total documents: {total_docs}")
         print(f"   Imbalanced categories: {len(imbalanced_categories)}")
         print(f"   Well-balanced categories: {len(well_balanced_categories)}")
@@ -154,7 +154,7 @@ def analyze_kb_distribution():
         }
         
     except Exception as e:
-        print(f"❌ Distribution analysis failed: {e}")
+        print(f"Distribution analysis failed: {e}")
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e)}
@@ -165,7 +165,7 @@ def validate_kb_grounding_quality():
     """
     Validate quality of KB grounding in recent plans.
     """
-    print("🔍 Validating KB grounding quality...")
+    print("Validating KB grounding quality...")
     
     try:
         # Get recent plans
@@ -192,7 +192,7 @@ def validate_kb_grounding_quality():
             plan_data = plan.plan_json
             
             for item in plan_data:
-                if item.get('file') == '📅 WEEKLY SCHEDULE':
+                if item.get('file') == 'WEEKLY SCHEDULE':
                     continue
                 
                 total_tasks += 1
@@ -248,7 +248,7 @@ def validate_kb_grounding_quality():
         
         status = "healthy" if not issues or len(successes) > len(issues) else "needs_attention"
         
-        print(f"✅ Quality validation complete")
+        print(f"   Quality validation complete")
         print(f"   Status: {status}")
         print(f"   KB usage: {kb_usage_rate:.1f}%")
         print(f"   Avg confidence: {avg_confidence:.3f}")
@@ -273,7 +273,7 @@ def validate_kb_grounding_quality():
         }
         
     except Exception as e:
-        print(f"❌ Quality validation failed: {e}")
+        print(f"Quality validation failed: {e}")
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e)}
@@ -285,7 +285,7 @@ def calibrate_thresholds():
     Recalibrate adaptive thresholds based on current KB data.
     Run weekly for optimal threshold adjustment.
     """
-    print("🎯 Calibrating adaptive thresholds...")
+    print("Calibrating adaptive thresholds...")
     
     try:
         from .knowledge_weighting import AdaptiveThresholdEngine
@@ -300,7 +300,7 @@ def calibrate_thresholds():
         
         global_thresholds = thresholds.get('_global', {})
         
-        print(f"✅ Thresholds calibrated:")
+        print(f"   Thresholds calibrated:")
         print(f"   Min similarity: {global_thresholds.get('min_similarity', 0):.3f}")
         print(f"   High similarity: {global_thresholds.get('high_similarity', 0):.3f}")
         print(f"   High confidence: {global_thresholds.get('high_confidence', 0):.3f}")
@@ -313,7 +313,7 @@ def calibrate_thresholds():
         }
         
     except Exception as e:
-        print(f"❌ Threshold calibration failed: {e}")
+        print(f"Threshold calibration failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -323,7 +323,7 @@ def update_calibration_parameters():
     Update dynamic calibration parameters.
     Run weekly for optimal calibration.
     """
-    print("⚙️ Updating calibration parameters...")
+    print("Updating calibration parameters...")
     
     try:
         from .knowledge_weighting import DynamicCalibrationEngine
@@ -340,7 +340,7 @@ def update_calibration_parameters():
         total_categories = len(params) - 1  # Exclude _default
         avg_boost = sum(p.get('boost', 1.0) for p in params.values()) / len(params) if params else 1.0
         
-        print(f"✅ Calibration parameters updated:")
+        print(f"  Calibration parameters updated:")
         print(f"   Categories calibrated: {total_categories}")
         print(f"   Average boost factor: {avg_boost:.3f}")
         
@@ -355,7 +355,7 @@ def update_calibration_parameters():
         }
         
     except Exception as e:
-        print(f"❌ Calibration update failed: {e}")
+        print(f" Calibration update failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -364,7 +364,7 @@ def generate_kb_health_report():
     """
     Generate comprehensive KB health report.
     """
-    print("📋 Generating KB health report...")
+    print("Generating KB health report...")
     
     try:
         # Run all checks
@@ -473,7 +473,7 @@ def generate_kb_health_report():
             key=lambda x: priority_order.get(x.get('priority', 'medium'), 1)
         )
         
-        print(f"✅ Health report generated")
+        print(f"   Health report generated")
         print(f"   Health Score: {health_score}/100")
         print(f"   Status: {report['overall_status'].upper()}")
         print(f"   Action items: {len(report['action_items'])}")
@@ -488,7 +488,7 @@ def generate_kb_health_report():
         return report
         
     except Exception as e:
-        print(f"❌ Report generation failed: {e}")
+        print(f"Report generation failed: {e}")
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e)}
@@ -500,7 +500,7 @@ def clear_all_kb_caches():
     Clear all KB-related caches.
     Use when KB has been significantly updated.
     """
-    print("🗑️ Clearing all KB caches...")
+    print("Clearing all KB caches...")
     
     try:
         # Clear Django caches
@@ -521,7 +521,7 @@ def clear_all_kb_caches():
             except Exception as e:
                 print(f"⚠️ Failed to clear {key}: {e}")
         
-        print(f"✅ Cleared {cleared_count}/{len(cache_keys)} cache keys")
+        print(f"Cleared {cleared_count}/{len(cache_keys)} cache keys")
         
         return {
             "success": True,
@@ -530,7 +530,7 @@ def clear_all_kb_caches():
         }
         
     except Exception as e:
-        print(f"❌ Cache clear failed: {e}")
+        print(f"Cache clear failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -540,7 +540,7 @@ def manual_kb_refresh():
     """
     Manually trigger comprehensive KB refresh.
     """
-    print("🔄 Manual comprehensive KB refresh initiated...")
+    print("Manual comprehensive KB refresh initiated...")
     
     # Clear all caches first
     clear_all_kb_caches.apply()
@@ -554,7 +554,7 @@ def manual_kb_health_check():
     """
     Manually trigger KB health check.
     """
-    print("🏥 Manual KB health check initiated...")
+    print("Manual KB health check initiated...")
     result = generate_kb_health_report.apply()
     return result.get()
 
@@ -563,6 +563,6 @@ def manual_category_discovery():
     """
     Manually trigger category discovery.
     """
-    print("🔍 Manual category discovery initiated...")
+    print("Manual category discovery initiated...")
     result = discover_new_categories.apply()
     return result.get()

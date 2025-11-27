@@ -219,7 +219,6 @@
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- HERO / HEADER -->
     <div class="gradient-hero text-white relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-purple-900/30"></div>
         <div class="relative z-10 max-w-7xl mx-auto px-6">
@@ -239,7 +238,6 @@
                 </div>
             </div>
 
-            <!-- TABS -->
             <div class="flex gap-0 overflow-hidden border-b border-white/20 -mb-px">
                 <button onclick="showTab('new')" id="tab-new"
                         class="tab-modern active">
@@ -275,15 +273,25 @@
             {% endfor %}
         {% endif %}
         
-        <!-- CREATE PLAN TAB -->
         <div id="content-new" class="tab-content">
             <form method="post" enctype="multipart/form-data" id="uploadForm">
                 {% csrf_token %}
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- LEFT COLUMN -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- STEP 1 -->
+                        <div class="card-modern p-6">
+                            <div class="flex items-center mb-4">
+                                <span class="step-number mr-3">0</span>
+                                <div>
+                                    <h2 class="text-xl font-semibold text-gray-800">Project Identity</h2>
+                                    <p class="text-sm text-gray-600">Name this study project for future reference</p>
+                                </div>
+                            </div>
+                            <input type="text" name="project_name" 
+                                   placeholder="e.g., Biology Final 2024 (Optional - Defaults to 'undefined')" 
+                                   class="w-full p-4 input-modern">
+                        </div>
+
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">1</span>
@@ -297,7 +305,6 @@
                                    class="w-full p-4 input-modern">
                         </div>
                         
-                        <!-- STEP 2 -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">2</span>
@@ -323,7 +330,6 @@
                             <div id="fileList" class="space-y-3 max-h-64 overflow-y-auto"></div>
                         </div>
                         
-                        <!-- STEP 3 -->
                         <div class="card-modern p-6">
                             <div class="flex items-center mb-4">
                                 <span class="step-number mr-3">3</span>
@@ -371,9 +377,7 @@
                         </div>
                     </div>
                     
-                    <!-- RIGHT COLUMN -->
                     <div class="space-y-6">
-                        <!-- PRIORITIZATION (no number) -->
                         <div class="card-modern p-6">
                             <h2 class="text-lg font-semibold text-gray-800 mb-4">Prioritization</h2>
                             <div class="space-y-3">
@@ -408,7 +412,6 @@
                             </div>
                         </div>
                         
-                        <!-- PREFERENCES (no number) -->
                         <div class="card-modern p-6">
                             <h2 class="text-lg font-semibold text-gray-800 mb-4">Preferences</h2>
                             <textarea name="constraint_prompt" rows="4" 
@@ -416,7 +419,6 @@
                                       class="w-full p-3 input-modern resize-none"></textarea>
                         </div>
                         
-                        <!-- FEATURES CARD -->
                         <div class="card-modern p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
                             <h3 class="font-semibold text-gray-800 mb-3">Platform Features</h3>
                             <div class="space-y-2">
@@ -438,20 +440,19 @@
             </form>
         </div>
         
-        <!-- HISTORY TAB -->
         <div id="content-history" class="tab-content hidden">
             {% if history_plans %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {% for plan in history_plans %}
                 <div class="history-card card-modern p-6" onclick="viewHistory({{ plan.id }})">
                     <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">
-                                {{ plan.created_at|date:"M d, Y" }}
+                        <div class="overflow-hidden mr-2">
+                            <h3 class="text-lg font-bold text-blue-900 truncate" title="{{ plan.project_name|default:'Untitled' }}">
+                                {{ plan.project_name|default:"Untitled" }}
                             </h3>
-                            <p class="text-sm text-gray-500">{{ plan.created_at|date:"H:i" }}</p>
+                            <p class="text-sm text-gray-500">{{ plan.created_at|date:"M d, Y" }}</p>
                         </div>
-                        <span class="px-3 py-1 gradient-primary text-white rounded-full text-xs font-medium">
+                        <span class="px-3 py-1 gradient-primary text-white rounded-full text-xs font-medium whitespace-nowrap">
                             {{ plan.sort_method|title }}
                         </span>
                     </div>
@@ -506,7 +507,6 @@
             {% endif %}
         </div>
 
-        <!-- QUIZZES TAB -->
         <div id="content-quizzes" class="tab-content hidden">
             {% if quiz_history %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -562,8 +562,82 @@
             {% endif %}
         </div>
     </div>
+
+    <div id="introModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden transition-opacity opacity-0 duration-300" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl relative transform scale-95 opacity-0 transition-all duration-300" id="introModalContent">
+            <button onclick="closeIntroModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-500/30">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Welcome to StudyFlow AI</h3>
+                <p class="text-slate-500 text-sm px-2">This is an AI-powered prioritization project designed to help students optimize their study schedules by analyzing assignments, textbooks, and research materials.</p>
+            </div>
+
+            <ul class="space-y-4 mb-8">
+                <li class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">1</div>
+                    <p class="text-slate-600 text-sm leading-relaxed pt-1">For optimal display, please use a <strong>Laptop, Computer, or iPad</strong>.</p>
+                </li>
+                <li class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">2</div>
+                    <p class="text-slate-600 text-sm leading-relaxed pt-1"><strong>Text-only documents</strong> (research papers, textbooks) process much faster than image-heavy slides.</p>
+                </li>
+                <li class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">3</div>
+                    <p class="text-slate-600 text-sm leading-relaxed pt-1">Processing time increases with the <strong>number of documents</strong> uploaded.</p>
+                </li>
+                <li class="flex gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold border border-blue-100">4</div>
+                    <p class="text-slate-600 text-sm leading-relaxed pt-1">Only <strong>PDF format</strong> is accepted for file uploads.</p>
+                </li>
+            </ul>
+
+            <button onclick="closeIntroModal()" class="w-full btn-primary py-3.5 rounded-xl font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
+                Got it, let's start!
+            </button>
+        </div>
+    </div>
     
     <script>
+        // Intro Modal Logic
+        const introModal = document.getElementById('introModal');
+        const introModalContent = document.getElementById('introModalContent');
+
+        function showIntroModal() {
+            if (!localStorage.getItem('hasSeenIntro_v1')) {
+                introModal.classList.remove('hidden');
+                // Small delay to allow display:block to apply before opacity transition
+                setTimeout(() => {
+                    introModal.classList.remove('opacity-0');
+                    introModalContent.classList.remove('scale-95', 'opacity-0');
+                    introModalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+        }
+
+        window.closeIntroModal = function() {
+            introModal.classList.add('opacity-0');
+            introModalContent.classList.remove('scale-100', 'opacity-100');
+            introModalContent.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                introModal.classList.add('hidden');
+            }, 300); // Match duration
+            
+            localStorage.setItem('hasSeenIntro_v1', 'true');
+        }
+
+        // Close on click outside
+        introModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeIntroModal();
+            }
+        });
+
         // Enhanced tab system with URL hash support
         function showTab(tabName) {
             // Hide all contents
@@ -589,6 +663,7 @@
             }
             updateTotalTime();
             updateFileDisplay();
+            showIntroModal();
         });
 
         // Allow clicking tabs from anywhere (e.g. history cards)

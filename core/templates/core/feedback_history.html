@@ -55,7 +55,7 @@
         <div class="max-w-7xl mx-auto px-6 py-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold mb-2">💭 Feedback History</h1>
+                    <h1 class="text-3xl font-bold mb-2">Feedback History</h1>
                     <p class="text-blue-100">Your feedback on study plans</p>
                 </div>
                 <a href="{% url 'upload_page_optimized' %}" 
@@ -85,9 +85,9 @@
                                 {% endfor %}
                             </div>
                             {% elif feedback.thumbs_up %}
-                            <span class="text-green-600 font-semibold">👍 Positive</span>
+                            <span class="text-green-600 font-semibold">Positive</span>
                             {% else %}
-                            <span class="text-red-600 font-semibold">👎 Negative</span>
+                            <span class="text-red-600 font-semibold">Negative</span>
                             {% endif %}
                             
                             <span class="text-xs text-gray-500">

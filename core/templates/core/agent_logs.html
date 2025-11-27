@@ -28,7 +28,7 @@
         <div class="classic-card rounded-xl p-6 mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800 mb-1">🔍 Agent Execution Logs</h1>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-1">Agent Execution Logs</h1>
                     <p class="text-gray-600">Real-time insights into AI agent behavior (Admin Only)</p>
                 </div>
                 <div class="text-right space-x-3">
@@ -38,7 +38,7 @@
                     </a>
                     <button onclick="location.reload()" 
                             class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">
-                        🔄 Refresh
+                        Refresh
                     </button>
                 </div>
             </div>
@@ -87,7 +87,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Tools Used -->
             <div class="classic-card rounded-xl p-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">🔧 Tools Used</h2>
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Tools Used</h2>
                 {% if summary.tools_used %}
                     <div class="flex flex-wrap gap-2">
                         {% for tool in summary.tools_used %}
@@ -103,7 +103,7 @@
             
             <!-- Performance Stats -->
             <div class="classic-card rounded-xl p-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">⚡ Performance</h2>
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Performance</h2>
                 <div class="space-y-3">
                     {% if performance_metrics.fastest_tool %}
                     <div class="flex justify-between items-center">
@@ -133,7 +133,7 @@
         
         <!-- Recent Plans -->
         <div class="classic-card rounded-xl p-6 mb-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Recent Plans Generated</h2>
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Plans Generated</h2>
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead class="bg-gray-50">
@@ -173,7 +173,7 @@
         <!-- Detailed Tool Logs -->
         <div class="classic-card rounded-xl p-6">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-800">📝 Detailed Tool Execution Log</h2>
+                <h2 class="text-xl font-bold text-gray-800">Detailed Tool Execution Log</h2>
                 <div class="space-x-2">
                     <button onclick="expandAll()" id="expandBtn" 
                             class="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition">

@@ -23,7 +23,7 @@ class StudyPlanHistoryAdmin(admin.ModelAdmin):
     search_fields = ('user__username',)
     list_filter = ('status', 'sort_method', 'created_at')
     readonly_fields = ('created_at', 'updated_at',)
-    filter_horizontal = ('uploads',)  # สำหรับ ManyToManyField
+    filter_horizontal = ('uploads',)  
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):

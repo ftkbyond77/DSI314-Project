@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Data Export</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <header class="bg-slate-900 text-white px-6 py-4 shadow-lg mb-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Admin Data Export</h1>
+            <a href="{% url 'upload_page_optimized' %}" class="text-sm text-slate-300 hover:text-white">Back to Dashboard</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for model in models_list %}
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">{{ model }}</h3>
+                        <p class="text-xs text-slate-400 font-mono">core.models</p>
+                    </div>
+                    <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    </div>
+                </div>
+                <a href="{% url 'export_model_csv' model %}" class="block w-full text-center py-2 bg-slate-900 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                    Download CSV
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</body>
+</html>

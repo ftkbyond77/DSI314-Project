@@ -1,4 +1,4 @@
-# core/views_optimized.py - Production-Grade Views with AI Batch Processing
+# core/views_optimized.py
 
 from django.contrib.auth import authenticate, login, logout
 from .forms import LoginForm, RegistrationForm
@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from .models import Upload, Plan, Chunk, StudyPlanHistory, QuizSession
 from .tasks import process_upload
 from .tasks_agentic_optimized import generate_optimized_plan_async
@@ -31,23 +31,56 @@ def safe_int(value, default=0):
     except (ValueError, TypeError):
         return default
 
-def _bucket_tasks_kanban(tasks):
-    """Helper to bucket tasks into High Quality, Back Log, and Validated"""
+def _bucket_tasks_kanban(tasks, kanban_state=None):
+    """
+    Bucket tasks. If kanban_state is provided (saved plan), use that.
+    Otherwise use default logic.
+    """
+    # Create a map for easy lookup. 
+    # Normalizing keys to ensure robust matching (though file names should be exact)
+    task_map = {t.get('file'): t for t in tasks}
+    
+    # 1. IF SAVED STATE EXISTS (Check if it's not None and is a dict)
+    # We remove the implicit boolean check (if kanban_state) because {} is False
+    if kanban_state is not None and isinstance(kanban_state, dict) and len(kanban_state) > 0:
+        columns = {
+            'high_quality': [],
+            'back_log': [],
+            'validated': []
+        }
+        
+        # Distribute tasks based on saved ids
+        found_tasks = set()
+        
+        for col_name, task_names in kanban_state.items():
+            if col_name in columns:
+                for name in task_names:
+                    # Clean the name just in case of weird whitespace from frontend
+                    clean_name = name.strip() if name else ""
+                    if clean_name in task_map:
+                        columns[col_name].append(task_map[clean_name])
+                        found_tasks.add(clean_name)
+        
+        # If any tasks were not found in state (e.g. new files), add to backlog
+        for name, task in task_map.items():
+            if name not in found_tasks:
+                columns['back_log'].append(task)
+                
+        return columns
+
+    # 2. DEFAULT LOGIC (If no save exists)
     columns = {
         'high_quality': [],
         'back_log': [],
-        'validated': []  # for user validation
+        'validated': []
     }
     
-    # Sort by priority first
     tasks_sorted = sorted(tasks, key=lambda x: x.get('priority', 999))
     
     for task in tasks_sorted:
         priority = task.get('priority', 999)
         urgency = task.get('urgency', 0)
         
-        # Logic: Priorities 1-5 OR Very High Urgency goes to High Quality
-        # Everything else goes to Back Log
         if priority <= 5 or urgency >= 8:
             columns['high_quality'].append(task)
         else:
@@ -62,6 +95,7 @@ def upload_page_optimized(request):
         files = request.FILES.getlist('files')
         
         user_goal = request.POST.get('user_goal', 'finish semester with good grades').strip()
+        project_name = request.POST.get('project_name', '').strip()
         sort_method = request.POST.get('sort_method', 'hybrid')
         constraint_prompt = request.POST.get('constraint_prompt', '').strip()
         
@@ -164,7 +198,8 @@ def upload_page_optimized(request):
             user_goal=user_goal,
             time_input=time_input,
             constraints=constraint_prompt,
-            sort_method=sort_method
+            sort_method=sort_method,
+            project_name=project_name
         )
         
         print(f"Task ID: {task.id}")
@@ -265,8 +300,8 @@ def planning_status_api(request, task_id):
 
 @login_required
 def result_page_optimized(request):
-    """Results with AI metrics"""
-    latest_plan = Plan.objects.filter(
+    """Display results with enhanced visualization"""
+    latest_plan = StudyPlanHistory.objects.filter(
         user=request.user
     ).order_by('-created_at').first()
     
@@ -283,15 +318,17 @@ def result_page_optimized(request):
         metadata = {}
         
         for item in plan:
-            if item.get('file') == '📅 WEEKLY SCHEDULE' or item.get('file') == 'WEEKLY SCHEDULE':
-                schedule = item.get('schedule', [])
-                metadata = item.get('metadata', {})
+            # Exclude #0 WEEKLY SCHEDULE from tasks
+            if (item.get('file') in ['WEEKLY SCHEDULE', 'WEEKLY SCHEDULE'] 
+                or item.get('priority') == 0):
+                
+                if 'schedule' in item:
+                    schedule = item.get('schedule', [])
+                    metadata = item.get('metadata', {})
             else:
                 tasks.append(item)
         
-        # --- NEW KANBAN LOGIC ---
-        kanban_columns = _bucket_tasks_kanban(tasks)
-        # ------------------------
+        kanban_columns = _bucket_tasks_kanban(tasks, latest_plan.kanban_state)
         
         total_files = len(tasks)
         total_chunks = sum(p.get('chunk_count', 0) for p in tasks)
@@ -309,6 +346,8 @@ def result_page_optimized(request):
         
         stats = {
             'plan_id': latest_plan.id,
+            'history_id': latest_plan.id,
+            'project_name': latest_plan.project_name,
             'total_files': total_files,
             'total_chunks': total_chunks,
             'total_pages': total_pages,
@@ -319,7 +358,9 @@ def result_page_optimized(request):
             'utilization': metadata.get('utilization_percent', 0),
             'ocr_pages_processed': ocr_pages_total,
             'llm_ranked': metadata.get('llm_ranked', False),
-            'ai_extraction_used': metadata.get('ai_extraction_used', False)
+            'ai_extraction_used': metadata.get('ai_extraction_used', False),
+            'user_goal': latest_plan.user_goal,
+            'constraints': latest_plan.constraints
         }
         
         kb_stats = {
@@ -382,16 +423,21 @@ def history_detail(request, history_id):
         messages.error(request, 'History not found')
         return redirect('upload_page_optimized')
     
-    plan_data = history.plan_json
-    schedule = history.get_schedule()
     tasks = history.get_tasks()
+    schedule = history.get_schedule()
     
-    # --- NEW KANBAN LOGIC ---
-    kanban_columns = _bucket_tasks_kanban(tasks)
-    # ------------------------
+    # Filter out schedule items from tasks if they snuck in
+    tasks = [
+        t for t in tasks 
+        if t.get('file') not in ['WEEKLY SCHEDULE', 'WEEKLY SCHEDULE']
+        and t.get('priority') != 0
+    ]
+    
+    kanban_columns = _bucket_tasks_kanban(tasks, history.kanban_state)
     
     stats = {
         'id': history.id,
+        'project_name': history.project_name,
         'total_files': history.total_files,
         'total_pages': history.total_pages,
         'total_chunks': history.total_chunks,
@@ -424,16 +470,11 @@ def history_detail(request, history_id):
 @login_required
 @require_http_methods(["POST"])
 def delete_history(request, history_id):
-    """Soft-delete a StudyPlanHistory by marking its status as 'deleted'.
-
-    Only the owner may delete their history. Uses POST to avoid accidental GET deletions.
-    """
     history = StudyPlanHistory.objects.filter(id=history_id, user=request.user).first()
     if not history:
         messages.error(request, 'History not found or access denied.')
         return redirect('upload_page_optimized')
 
-    # Soft delete by updating status; keep record for analytics/audit
     history.status = 'deleted'
     history.save(update_fields=['status'])
     messages.success(request, 'Study plan history deleted.')
@@ -500,3 +541,21 @@ def logout_view(request):
     logout(request)
     messages.success(request, 'Logged out successfully.')
     return redirect('login_page')
+
+@login_required
+@require_POST
+def save_plan_state(request, history_id):
+    """API to save the kanban column arrangement"""
+    try:
+        history = StudyPlanHistory.objects.get(id=history_id, user=request.user)
+        data = json.loads(request.body)
+        
+        # Expecting { 'high_quality': [...], 'back_log': [...], 'validated': [...] }
+        history.kanban_state = data
+        history.save(update_fields=['kanban_state'])
+        
+        return JsonResponse({'success': True, 'message': 'Plan saved successfully'})
+    except StudyPlanHistory.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Plan not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

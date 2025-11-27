@@ -1,5 +1,5 @@
 # core/tasks_agentic_optimized.py - FINAL PRODUCTION
-# LLM-Based Ranking + Full Async + Validation After Sorting
+# LLM-Based Ranking + Full Async + Validation After Sorting + File Wait Logic
 
 from typing import List, Dict, Tuple
 from celery import shared_task
@@ -67,13 +67,9 @@ def _determine_task_type(task_name: str, task_analysis: Dict) -> str:
 def _prepare_tasks_for_llm_ranking(tasks: List[Dict], sort_method: str) -> List[Dict]:
     """
     Prepare tasks with initial scores but LET LLM DO FINAL RANKING.
-    
-    This provides guidance scores but LLM makes final decisions.
     """
+    print(f"   Preparing {len(tasks)} tasks for LLM-based ranking...")
     
-    print(f"   🤖 Preparing {len(tasks)} tasks for LLM-based ranking...")
-    
-    # Calculate guidance scores (NOT final priorities)
     for task in tasks:
         analysis = task['analysis']
         kb_grounding = analysis.get('knowledge_grounding', {})
@@ -84,7 +80,6 @@ def _prepare_tasks_for_llm_ranking(tasks: List[Dict], sort_method: str) -> List[
         foundational = 10 if analysis.get('is_foundational', False) else 0
         kb_gap = (1 - kb_grounding.get('knowledge_relevance_score', 0.5)) * 10
         
-        # Calculate guidance scores based on method
         if sort_method == 'urgency':
             task['guidance_score'] = urgency
         elif sort_method == 'complexity':
@@ -101,26 +96,18 @@ def _prepare_tasks_for_llm_ranking(tasks: List[Dict], sort_method: str) -> List[
             task['guidance_score'] = analysis.get('knowledge_adjusted_score', 
                                                  analysis.get('preferred_score', 5))
     
-    # Sort by guidance score (initial ordering for LLM)
     tasks_sorted = sorted(tasks, key=lambda t: (-t['guidance_score'], -t['analysis'].get('pages', 0), t['task']))
     
-    # Assign TEMPORARY priorities (LLM will reassign)
     for idx, task in enumerate(tasks_sorted, 1):
         task['temp_priority'] = idx
     
-    print(f"   ✅ Tasks prepared with guidance scores (LLM will determine final priorities)")
+    print(f"   Tasks prepared with guidance scores (LLM will determine final priorities)")
     
     return tasks_sorted
 
 
-# ==================== VALIDATION FUNCTIONS ====================
-
 def _validate_priorities(tasks: List[Dict]) -> Tuple[bool, str]:
-    """
-    Validate that priorities are sequential (1, 2, 3, ..., N).
-    
-    Returns: (is_valid, error_message)
-    """
+    """Validate that priorities are sequential."""
     if not tasks:
         return True, ""
     
@@ -129,55 +116,33 @@ def _validate_priorities(tasks: List[Dict]) -> Tuple[bool, str]:
     
     if priorities != expected:
         error_msg = f"Priority validation FAILED! Expected: {expected}, Got: {priorities}"
-        
-        # Show duplicates
         from collections import Counter
         duplicates = [p for p, count in Counter(priorities).items() if count > 1]
         if duplicates:
             error_msg += f" | Duplicates: {duplicates}"
-        
-        # Show missing
         missing = set(expected) - set(priorities)
         if missing:
             error_msg += f" | Missing: {sorted(missing)}"
-        
         return False, error_msg
     
     return True, ""
 
 
 def _force_sequential_priorities(tasks: List[Dict]) -> List[Dict]:
-    """
-    Force sequential priorities if validation fails.
-    
-    Sorts by existing priority, then reassigns 1, 2, 3...
-    """
-    print(f"   🔧 Forcing sequential priorities...")
-    
-    # Sort by existing priority
+    """Force sequential priorities if validation fails."""
+    print(f"   Forcing sequential priorities...")
     sorted_tasks = sorted(tasks, key=lambda t: (t.get('priority', 999), t['task']))
-    
-    # Reassign sequential
     for idx, task in enumerate(sorted_tasks, 1):
         old_priority = task.get('priority', 999)
         task['priority'] = idx
         if old_priority != idx:
-            print(f"      Corrected: {task['task'][:30]}... ({old_priority} → {idx})")
-    
+            print(f"      Corrected: {task['task'][:30]}... ({old_priority} -> {idx})")
     return sorted_tasks
 
 
-# ==================== PRIORITY EXTRACTION WITH VALIDATION ====================
-
 def _extract_llm_priorities(prepared_tasks: List[Dict], reasoning: Dict) -> List[Dict]:
-    """
-    Extract LLM-assigned priorities from reasoning XML with validation.
-    
-    LLM's priorities in XML override guidance scores.
-    Validates after extraction and forces correction if needed.
-    """
-    
-    print(f"   🔍 Extracting LLM-assigned priorities...")
+    """Extract LLM-assigned priorities from reasoning XML with validation."""
+    print(f"   Extracting LLM-assigned priorities...")
     
     task_reasoning = reasoning.get("tasks", {})
     extraction_success = 0
@@ -187,73 +152,94 @@ def _extract_llm_priorities(prepared_tasks: List[Dict], reasoning: Dict) -> List
         
         if task_name in task_reasoning:
             reasoning_text = task_reasoning[task_name]
-            
-            # Extract priority from XML
             priority_match = re.search(r'<task_analysis\s+priority="(\d+)">', reasoning_text)
             if priority_match:
                 llm_priority = int(priority_match.group(1))
                 task['priority'] = llm_priority
                 extraction_success += 1
-                print(f"      {task_name[:30]}... → Priority #{llm_priority} (LLM)")
+                print(f"      {task_name[:30]}... -> Priority #{llm_priority} (LLM)")
             else:
-                # Fallback to temp priority
                 task['priority'] = task.get('temp_priority', 999)
-                print(f"      {task_name[:30]}... → Priority #{task['priority']} (fallback)")
+                print(f"      {task_name[:30]}... -> Priority #{task['priority']} (fallback)")
         else:
             task['priority'] = task.get('temp_priority', 999)
     
-    print(f"   📊 Extracted {extraction_success}/{len(prepared_tasks)} priorities from LLM")
+    print(f"   Extracted {extraction_success}/{len(prepared_tasks)} priorities from LLM")
     
-    # CRITICAL: Validate priorities after extraction
-    print(f"   🔍 Validating priorities after LLM extraction...")
+    print(f"   Validating priorities after LLM extraction...")
     is_valid, error_msg = _validate_priorities(prepared_tasks)
     
     if not is_valid:
-        print(f"   ⚠️ {error_msg}")
-        print(f"   🔧 Applying automatic correction...")
-        
-        # Force sequential priorities
+        print(f"   {error_msg}")
+        print(f"   Applying automatic correction...")
         prepared_tasks = _force_sequential_priorities(prepared_tasks)
         
-        # Validate again
         is_valid_after, error_msg_after = _validate_priorities(prepared_tasks)
         if is_valid_after:
-            print(f"   ✅ Priorities corrected successfully")
+            print(f"   Priorities corrected successfully")
         else:
-            print(f"   ❌ Priority correction failed: {error_msg_after}")
+            print(f"   Priority correction failed: {error_msg_after}")
             raise ValueError(f"Unable to assign valid priorities: {error_msg_after}")
     else:
-        print(f"   ✅ Priorities validated: Sequential 1-{len(prepared_tasks)}")
+        print(f"   Priorities validated: Sequential 1-{len(prepared_tasks)}")
     
-    # Sort by validated priority
     final_tasks = sorted(prepared_tasks, key=lambda t: t['priority'])
-    
     return final_tasks
 
 
 # ==================== OPTIMIZED PLANNING TASK ====================
 
-@shared_task(bind=True, max_retries=2, time_limit=600)
+@shared_task(bind=True, max_retries=2, time_limit=1200) # Increased time limit for waiting
 def generate_optimized_plan_async(self, user_id, upload_ids, user_goal, 
-                                  time_input, constraints, sort_method):
+                                  time_input, constraints, sort_method, project_name=None):
     """
     FINAL PRODUCTION: LLM-based ranking + Full async + Validation.
-    
-    Key Features:
-    - LLM does the ranking (not algorithmic sort)
-    - Full async processing (no ThreadPoolExecutor)
-    - High-quality, meaningful reasoning with long context
-    - VALIDATION AFTER SORTING (ensures sequential priorities)
-    - Fast recall, high accuracy, production-grade
+    Includes wait logic for file processing.
     """
     try:
-        print(f"🚀 [Task {self.request.id}] Starting LLM-based planning (PRODUCTION)")
+        print(f"[Task {self.request.id}] Starting LLM-based planning (PRODUCTION)")
         start_time = time.time()
         ToolLogger.clear_logs()
 
         from django.contrib.auth import get_user_model
         User = get_user_model()
         
+        # ==================== Phase 0: Wait for Files ====================
+        # Wait up to 10 minutes for files to process
+        MAX_WAIT_SECONDS = 600
+        wait_start = time.time()
+        
+        print(f"   Waiting for {len(upload_ids)} files to complete processing...")
+        
+        while True:
+            # Check status of all requested uploads
+            pending_count = Upload.objects.filter(
+                id__in=upload_ids, 
+                status__in=['uploaded', 'processing']
+            ).count()
+            
+            # Update progress for user
+            processed_count = len(upload_ids) - pending_count
+            
+            if pending_count == 0:
+                print(f"   All files processed. Proceeding to planning.")
+                break
+                
+            if time.time() - wait_start > MAX_WAIT_SECONDS:
+                print(f"   Wait timeout reached ({MAX_WAIT_SECONDS}s). Proceeding with incomplete files.")
+                break
+                
+            self.update_state(
+                state='PROCESSING',
+                meta={
+                    'current': 0, 
+                    'total': 5, 
+                    'status': f'Processing files ({processed_count}/{len(upload_ids)})... Please wait.'
+                }
+            )
+            
+            time.sleep(2) # Polling interval
+
         # ==================== Phase 1: Get Uploads ====================
         uploads = Upload.objects.filter(
             id__in=upload_ids,
@@ -262,9 +248,9 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         ).select_related('user')
         
         if not uploads.exists():
-            return {"success": False, "error": "No processed uploads found"}
+            return {"success": False, "error": "No files were successfully processed. Please check if files are valid PDFs."}
 
-        print(f"   📁 Found {uploads.count()} processed uploads")
+        print(f"   Found {uploads.count()} processed uploads")
 
         # ==================== Phase 2: Task Analysis with KB Grounding ====================
         self.update_state(
@@ -276,7 +262,6 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         analyzed_tasks = []
         
         for upload in uploads:
-            # Get content for KB comparison
             chunks = list(Chunk.objects.filter(upload=upload).order_by('start_page')[:3])
             content = " ".join([chunk.text[:500] for chunk in chunks])
             
@@ -287,7 +272,6 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 "source_type": "textbook"
             }
             
-            # Analysis with KB grounding enabled
             analysis_result = task_tool._run(
                 task_name=upload.filename, 
                 content_summary=content, 
@@ -298,7 +282,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             
             analyzed_tasks.append(json.loads(analysis_result))
 
-        print(f"   ✅ Analyzed {len(analyzed_tasks)} tasks with KB grounding")
+        print(f"   Analyzed {len(analyzed_tasks)} tasks with KB grounding")
 
         # ==================== Phase 3: PREPARE FOR LLM RANKING ====================
         self.update_state(
@@ -306,10 +290,8 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             meta={'current': 2, 'total': 5, 'status': 'Preparing for LLM-based ranking...'}
         )
         
-        # Prepare tasks with guidance scores (LLM will do final ranking)
         prepared_tasks = _prepare_tasks_for_llm_ranking(analyzed_tasks, sort_method)
-        
-        print(f"   🤖 Tasks ready for LLM ranking (method: {sort_method})")
+        print(f"   Tasks ready for LLM ranking (method: {sort_method})")
 
         # ==================== Phase 4: LLM RANKING + REASONING ====================
         self.update_state(
@@ -317,18 +299,15 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             meta={'current': 3, 'total': 5, 'status': 'LLM generating rankings & reasoning...'}
         )
         
-        # CRITICAL: LLM does ranking AND reasoning (full async)
         reasoning = generate_knowledge_grounded_reasoning(
-            tasks=prepared_tasks,  # Tasks with guidance scores
-            schedule_data={"schedule": [], "available_hours": 0},  # Temporary, will regenerate
+            tasks=prepared_tasks,
+            schedule_data={"schedule": [], "available_hours": 0},
             user_goal=user_goal,
             sort_method=sort_method
         )
         
-        # Extract LLM-assigned priorities with VALIDATION
         final_tasks = _extract_llm_priorities(prepared_tasks, reasoning)
-        
-        print(f"   ✅ LLM ranking complete with validated priorities")
+        print(f"   LLM ranking complete with validated priorities")
 
         # ==================== Phase 5: Generate Schedule ====================
         self.update_state(
@@ -341,7 +320,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         if total_hours_available > 0:
             scheduling_tool = FlexibleSchedulingTool()
             schedule_result = scheduling_tool._run(
-                prioritized_tasks=json.dumps(final_tasks),  # Use validated priorities
+                prioritized_tasks=json.dumps(final_tasks),
                 available_time=time_input,
                 constraints=constraints,
                 sort_method=sort_method
@@ -351,16 +330,14 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             schedule_data['constraints'] = constraints
             schedule = schedule_data.get("schedule", [])
             
-            # Regenerate schedule reasoning with final priorities
             reasoning_updated = generate_knowledge_grounded_reasoning(
                 tasks=final_tasks,
                 schedule_data=schedule_data,
                 user_goal=user_goal,
                 sort_method=sort_method
             )
-            reasoning = reasoning_updated  # Use updated reasoning
-            
-            print(f"   ✅ Created schedule with {len(schedule)} items")
+            reasoning = reasoning_updated
+            print(f"   Created schedule with {len(schedule)} items")
         else:
             schedule_data = {
                 "schedule": [], 
@@ -371,7 +348,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 "constraints": ""
             }
             schedule = []
-            print(f"   ⚠️ No time provided - skipping schedule")
+            print(f"   No time provided - skipping schedule")
 
         # ==================== Phase 6: Build plan_json ====================
         self.update_state(
@@ -383,10 +360,9 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         
         plan_json = []
         
-        # Add schedule section
         if schedule:
             plan_json.append({
-                "file": "📅 WEEKLY SCHEDULE",
+                "file": "WEEKLY SCHEDULE",
                 "priority": 0,
                 "reason": reasoning.get("schedule", "Optimized schedule"),
                 "schedule": schedule,
@@ -401,14 +377,13 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 }
             })
         
-        # Add LLM-prioritized tasks with reasoning
         for task in final_tasks:
             analysis = task["analysis"]
             kb_grounding = analysis.get('knowledge_grounding', {})
             
             plan_json.append({
                 "file": task["task"],
-                "priority": task["priority"],  # LLM-assigned + validated priority
+                "priority": task["priority"],
                 "reason": reasoning.get("tasks", {}).get(task["task"], "AI analysis"),
                 "chunk_count": analysis.get("chunks", 0),
                 "pages": analysis.get("pages", 0),
@@ -417,7 +392,6 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
                 "complexity": analysis.get("complexity", 5),
                 "urgency": analysis.get("urgency_score", 5),
                 "guidance_score": task.get("guidance_score", 0),
-                # KB metrics
                 "kb_relevance": kb_grounding.get("knowledge_relevance_score", 0.5),
                 "kb_confidence": kb_grounding.get("confidence", 0),
                 "kb_depth": kb_grounding.get("knowledge_depth", "unknown"),
@@ -427,6 +401,14 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             })
 
         # ==================== Phase 7: Save to Database ====================
+        final_project_name = project_name
+        if not final_project_name or final_project_name.strip() == "":
+            undefined_count = StudyPlanHistory.objects.filter(
+                user_id=user_id, 
+                project_name__startswith="undefined"
+            ).count()
+            final_project_name = f"undefined{undefined_count + 1}"
+
         plan = Plan.objects.create(
             user_id=user_id,
             upload=uploads.first(),  
@@ -436,6 +418,7 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         
         history = StudyPlanHistory.objects.create(
             user_id=user_id,
+            project_name=final_project_name,
             plan_json=plan_json,                
             user_goal=user_goal,
             sort_method=sort_method,
@@ -473,15 +456,15 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
             "priorities_validated": True
         }
         
-        print(f"✅ [Task {self.request.id}] COMPLETED in {total_time:.2f}s")
-        print(f"   📊 Summary:")
+        print(f"[Task {self.request.id}] COMPLETED in {total_time:.2f}s")
+        print(f"   Summary:")
         print(f"      Tasks: {len(final_tasks)} (LLM-ranked + validated)")
         print(f"      Schedule: {len(schedule)} items")
         print(f"      KB-grounded: {kb_stats['tasks_with_kb']}/{len(final_tasks)}")
         print(f"      Avg KB confidence: {kb_stats['avg_confidence']:.3f}")
         print(f"      Sort method: {sort_method}")
-        print(f"      Ranking: LLM-based ✓")
-        print(f"      Validation: Passed ✓")
+        print(f"      Ranking: LLM-based")
+        print(f"      Validation: Passed")
         
         return {
             "success": True, 
@@ -505,12 +488,11 @@ def generate_optimized_plan_async(self, user_id, upload_ids, user_goal,
         import traceback
         error_trace = traceback.format_exc()
         
-        print(f"❌ [Task {self.request.id}] FAILED: {str(exc)}")
+        print(f"[Task {self.request.id}] FAILED: {str(exc)}")
         print(error_trace)
         
-        # Retry with exponential backoff
         if self.request.retries < self.max_retries:
-            print(f"   🔄 Retrying ({self.request.retries + 1}/{self.max_retries})...")
+            print(f"   Retrying ({self.request.retries + 1}/{self.max_retries})...")
             raise self.retry(exc=exc, countdown=5 * (2 ** self.request.retries))
         
         return {
@@ -533,7 +515,7 @@ def process_large_upload_batch(self, upload_id, batch_start, batch_end, batch_si
         import os
 
         upload = Upload.objects.get(id=upload_id)
-        print(f"📄 Processing batch {batch_start}-{batch_end} of {upload.filename}")
+        print(f"Processing batch {batch_start}-{batch_end} of {upload.filename}")
 
         text_data = extract_text_from_pdf(upload.file.path)
         pages_batch = text_data["pages"][batch_start:batch_end]
@@ -589,7 +571,7 @@ def process_large_upload_batch(self, upload_id, batch_start, batch_end, batch_si
                 metadatas=vector_metadatas
             )
 
-        print(f"✅ Batch complete: {len(vector_texts)} chunks")
+        print(f"Batch complete: {len(vector_texts)} chunks")
 
         return {
             "success": True,
@@ -598,7 +580,7 @@ def process_large_upload_batch(self, upload_id, batch_start, batch_end, batch_si
         }
 
     except Exception as e:
-        print(f"❌ Batch processing failed: {e}")
+        print(f"Batch processing failed: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -608,7 +590,7 @@ def process_large_upload_batch(self, upload_id, batch_start, batch_end, batch_si
 def cleanup_old_logs():
     """Clean up old logs (run daily)"""
     ToolLogger.clear_logs()
-    print("🧹 Agent logs cleaned")
+    print("Agent logs cleaned")
 
 
 @shared_task
@@ -626,5 +608,5 @@ def cleanup_failed_uploads():
     count = failed.count()
     failed.delete()
     
-    print(f"🧹 Cleaned {count} failed uploads")
+    print(f"Cleaned {count} failed uploads")
     return {"deleted": count}

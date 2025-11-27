@@ -6,6 +6,7 @@ from . import views_optimized
 # Import quiz and feedback views
 from . import views_quiz
 from . import views_feedback
+from . import views
 
 urlpatterns = [
     # ==================== MAIN ROUTES ====================
@@ -20,6 +21,7 @@ urlpatterns = [
     # ==================== ASYNC PROGRESS ====================
     path('planning-progress/', views_optimized.planning_progress, name='planning_progress'),
     path('api/planning-status/<str:task_id>/', views_optimized.planning_status_api, name='planning_status_api'),
+    path('api/save-plan/<int:history_id>/', views_optimized.save_plan_state, name='save_plan_state'),
     
     # ==================== ADMIN ====================
     path('admin/agent-logs/', views_optimized.agent_logs, name='agent_logs'),
@@ -53,4 +55,8 @@ urlpatterns = [
     # Admin routes
     path('admin/trigger-rl/', views_feedback.trigger_rl_adjustment, name='trigger_rl_adjustment'),
     path('admin/view-adjustments/', views_feedback.view_adjustments, name='view_adjustments'),
+    
+    # Admin Export CSV
+    path('csv-export/', views.admin_csv_page, name='admin_csv_page'),
+    path('csv-export/<str:model_name>/', views.export_model_csv, name='export_model_csv'),
 ]

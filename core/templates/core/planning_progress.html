@@ -191,7 +191,7 @@
                 </h3>
                 <div id="activityLog" class="max-h-48 overflow-y-auto space-y-2">
                     <div class="activity-item">
-                        🚀 Task submitted to processing queue
+                        Task submitted to processing queue
                     </div>
                 </div>
             </div>
@@ -217,17 +217,14 @@
         <!-- Info Cards -->
         <div class="grid grid-cols-3 gap-4 mt-6">
             <div class="card-modern p-4 text-center">
-                <div class="text-2xl mb-2">🤖</div>
                 <h4 class="font-semibold text-gray-800 mb-1">AI Analysis</h4>
                 <p class="text-xs text-gray-600">Deep content analysis</p>
             </div>
             <div class="card-modern p-4 text-center">
-                <div class="text-2xl mb-2">📊</div>
                 <h4 class="font-semibold text-gray-800 mb-1">Prioritization</h4>
                 <p class="text-xs text-gray-600">Smart task ordering</p>
             </div>
             <div class="card-modern p-4 text-center">
-                <div class="text-2xl mb-2">📅</div>
                 <h4 class="font-semibold text-gray-800 mb-1">Scheduling</h4>
                 <p class="text-xs text-gray-600">Optimal time allocation</p>
             </div>
@@ -286,10 +283,10 @@
                         
                         // Map progress steps to user-friendly messages
                         const messages = {
-                            'Analyzing tasks...': '📖 Analyzing document content and complexity',
-                            'Prioritizing tasks...': '🎯 Applying AI prioritization algorithms',
-                            'Creating schedule...': '📅 Generating optimized study schedule',
-                            'Generating reasoning...': '🤖 Creating detailed explanations'
+                            'Analyzing tasks...': 'Analyzing document content and complexity',
+                            'Prioritizing tasks...': 'Applying AI prioritization algorithms',
+                            'Creating schedule...': 'Generating optimized study schedule',
+                            'Generating reasoning...': 'Creating detailed explanations'
                         };
                         
                         const displayStatus = messages[status] || status;
@@ -299,11 +296,11 @@
                         clearInterval(pollInterval);
                         
                         if (data.success) {
-                            updateProgress(4, 4, '✅ Complete! Preparing your results...');
+                            updateProgress(4, 4, 'Complete! Preparing your results...');
                             
                             // Add completion stats
                             if (data.tool_summary) {
-                                addActivity(`📊 Analysis complete: ${data.tool_summary.total_calls || 0} AI operations in ${data.execution_time}s`);
+                                addActivity(`Analysis complete: ${data.tool_summary.total_calls || 0} AI operations in ${data.execution_time}s`);
                             }
                             
                             // Show success animation

@@ -88,7 +88,7 @@ class FeedbackCollector:
         analytics, created = UserAnalytics.objects.get_or_create(user=user)
         analytics.update_from_feedback(feedback)
         
-        print(f"📝 Feedback collected: {feedback}")
+        print(f"Feedback collected: {feedback}")
         
         return feedback
     
@@ -142,7 +142,7 @@ class ReinforcementLearningEngine:
             List of ScoringModelAdjustment objects created
         """
         
-        print(f"🔄 Analyzing feedback for {scope} scope...")
+        print(f"Analyzing feedback for {scope} scope...")
         
         # Get unprocessed feedback
         feedback_query = PrioritizationFeedback.objects.filter(processed=False)
@@ -157,10 +157,10 @@ class ReinforcementLearningEngine:
         feedback_items = list(feedback_query)
         
         if len(feedback_items) < self.min_feedback_count and not force:
-            print(f"⏸️  Insufficient feedback ({len(feedback_items)}/{self.min_feedback_count})")
+            print(f"⏸Insufficient feedback ({len(feedback_items)}/{self.min_feedback_count})")
             return []
         
-        print(f"📊 Processing {len(feedback_items)} feedback items...")
+        print(f"Processing {len(feedback_items)} feedback items...")
         
         # Analyze feedback patterns
         analysis = self._analyze_feedback_patterns(feedback_items)
@@ -185,7 +185,7 @@ class ReinforcementLearningEngine:
             )
             adjustment_objects.append(adj_obj)
             
-            print(f"  ✅ {adj['factor']}: {adj['old_weight']:.3f} → {adj['new_weight']:.3f}")
+            print(f"{adj['factor']}: {adj['old_weight']:.3f} → {adj['new_weight']:.3f}")
         
         # Mark feedback as processed
         feedback_query.update(processed=True, processed_at=timezone.now())
@@ -420,7 +420,7 @@ class ReinforcementLearningEngine:
                 analytics.personalized_weights[adj.factor_name] = adj.new_weight
                 analytics.save()
         
-        print(f"✅ Applied {len(adjustments)} adjustments")
+        print(f"Applied {len(adjustments)} adjustments")
         return True
 
 

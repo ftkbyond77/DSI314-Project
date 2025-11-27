@@ -1,20 +1,28 @@
-# core/pdf_utils.py — OPTIMIZED FOR LARGE PDFs WITH OCR SUPPORT
+# core/pdf_utils.py - OPTIMIZED FOR LARGE PDFs WITH OCR SUPPORT
 
 import PyPDF2
 from typing import List, Dict
 import re
 from PIL import Image
 import io
+import concurrent.futures
 
 # ==================== CONFIGURATION ====================
-CHUNK_SIZE = 1000  # Characters per chunk
-CHUNK_OVERLAP = 200  # Overlap between chunks
-MIN_CHUNK_SIZE = 100  # Minimum viable chunk size
-MAX_PAGES_PER_BATCH = 50  # Process PDFs in batches for memory efficiency
-MIN_TEXT_THRESHOLD = 50  # Minimum text length to consider page as text-based
-OCR_ENABLED = True  # Global OCR toggle
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
+MIN_CHUNK_SIZE = 100
+MAX_PAGES_PER_BATCH = 50
+MIN_TEXT_THRESHOLD = 50
+OCR_ENABLED = True
 
-# Lazy load EasyOCR to avoid startup overhead
+# OPTIMIZATION SETTINGS
+# Reduced to 800 for max speed while keeping text readable
+MAX_IMAGE_DIMENSION = 800  
+MIN_IMAGE_DIMENSION = 150   
+# Number of concurrent OCR threads (adjusted for typical container limits)
+OCR_WORKERS = 4             
+
+# Lazy load EasyOCR
 _ocr_reader = None
 
 def get_ocr_reader():
@@ -24,31 +32,31 @@ def get_ocr_reader():
         try:
             import easyocr
             print("Initializing EasyOCR (this may take a moment on first run)...")
-            _ocr_reader = easyocr.Reader(['en', 'th'], gpu=False) # Set gpu=True if CUDA available
+            # gpu=False is default, explicitly set to False for CPU environments
+            _ocr_reader = easyocr.Reader(['en', 'th'], gpu=False) 
             print("OCR reader initialized")
         except ImportError:
-            print("!EasyOCR not installed. OCR functionality disabled.")
+            print("EasyOCR not installed. OCR functionality disabled.")
             return None
         except Exception as e:
-            print(f"!Failed to initialize OCR: {str(e)}")
+            print(f"Failed to initialize OCR: {str(e)}")
             return None
     return _ocr_reader
 
 def sanitize_text(text: str) -> str:
-    """Remove NUL characters and other problematic bytes that PostgreSQL can't handle"""
+    """Remove NUL characters and other problematic bytes"""
     if not text:
         return ""
-    
-    # Remove NUL bytes (0x00)
     text = text.replace('\x00', '')
-    
-    # Remove other control characters except common ones (tab, newline, carriage return)
-    text = ''.join(char for char in text if ord(char) >= 32 or char in '\t\n\r')
-    
-    return text
+    return ''.join(char for char in text if ord(char) >= 32 or char in '\t\n\r')
 
 def extract_text_from_image(image_bytes: bytes) -> str:
-    """Extract text from image using OCR"""
+    """
+    Extract text from image using OCR with aggressive speed optimizations:
+    1. Grayscale conversion
+    2. Bilinear downscaling to 800px
+    3. Greedy decoding (beamWidth=1)
+    """
     if not OCR_ENABLED:
         return ""
     
@@ -57,22 +65,34 @@ def extract_text_from_image(image_bytes: bytes) -> str:
         return ""
     
     try:
-        # Convert bytes to PIL Image
         image = Image.open(io.BytesIO(image_bytes))
         
-        # Convert to RGB if necessary
-        if image.mode not in ('RGB', 'L'):
-            image = image.convert('RGB')
+        # Optimization 1: Convert to Grayscale (faster processing)
+        if image.mode != 'L':
+            image = image.convert('L')
         
-        # Perform OCR
-        result = reader.readtext(image, detail=0, paragraph=True)
+        # Optimization 2: Downscale large images using Bilinear (faster than Lanczos)
+        width, height = image.size
+        if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+            ratio = min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height)
+            new_size = (int(width * ratio), int(height * ratio))
+            image = image.resize(new_size, Image.Resampling.BILINEAR)
         
-        # Join results
-        text = ' '.join(result)
-        return sanitize_text(text)
+        # Optimization 3: Perform OCR with Greedy Decoding
+        # beamWidth=1 disables beam search, significantly speeding up CPU inference
+        # workers=0 prevents nested multiprocessing overhead
+        result = reader.readtext(
+            image, 
+            detail=0, 
+            paragraph=True, 
+            beamWidth=1, 
+            workers=0
+        )
+        
+        return sanitize_text(' '.join(result))
         
     except Exception as e:
-        print(f"!OCR failed: {str(e)}")
+        print(f"OCR failed: {str(e)}")
         return ""
 
 def has_images(page) -> bool:
@@ -88,7 +108,7 @@ def has_images(page) -> bool:
         return False
 
 def extract_images_from_page(page) -> List[bytes]:
-    """Extract image bytes from PDF page"""
+    """Extract image bytes from PDF page with filtering"""
     images = []
     try:
         if '/XObject' not in page['/Resources']:
@@ -99,96 +119,129 @@ def extract_images_from_page(page) -> List[bytes]:
         for obj in x_objects:
             if x_objects[obj]['/Subtype'] == '/Image':
                 try:
-                    size = (x_objects[obj]['/Width'], x_objects[obj]['/Height'])
-                    data = x_objects[obj].get_data()
+                    # Filter out very small images (icons, lines, decorations)
+                    width = x_objects[obj].get('/Width', 0)
+                    height = x_objects[obj].get('/Height', 0)
                     
-                    # Skip very small images (likely icons/decorations)
-                    if size[0] < 100 or size[1] < 100:
+                    if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
                         continue
-                    
+                        
+                    data = x_objects[obj].get_data()
                     images.append(data)
                     
                 except Exception as e:
-                    print(f"!Failed to extract image: {str(e)}")
                     continue
-        
     except Exception as e:
-        print(f"!Image extraction error: {str(e)}")
+        print(f"Image extraction error: {str(e)}")
     
     return images
 
+def process_page_ocr(page_num: int, existing_text: str, images: List[bytes]) -> Dict:
+    """
+    Helper function to run in thread pool.
+    Performs OCR on a list of images and merges with existing text.
+    """
+    ocr_text_parts = []
+    for img_bytes in images:
+        text = extract_text_from_image(img_bytes)
+        if text:
+            ocr_text_parts.append(text)
+    
+    final_text = existing_text
+    if ocr_text_parts:
+        final_text += "\n" + "\n".join(ocr_text_parts)
+    
+    final_text = clean_text(final_text)
+    
+    return {
+        "page_num": page_num,
+        "text": final_text,
+        "ocr_used": len(ocr_text_parts) > 0
+    }
+
 def extract_text_from_pdf(pdf_path: str) -> Dict:
     """
-    Extract text from PDF with optimizations for large files.
-    Automatically uses OCR for image-based pages.
-    Processes pages in batches to manage memory efficiently.
+    Extract text from PDF with PARALLEL OCR processing.
     """
     try:
-        total_pages = 0
         all_pages_text = []
         ocr_pages_count = 0
+        total_pages = 0
         
         with open(pdf_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
             total_pages = len(reader.pages)
-            print(f"!PDF has {total_pages} pages")
+            print(f"PDF has {total_pages} pages")
             
-            # Process in batches for large PDFs
+            # Process in batches
             for batch_start in range(0, total_pages, MAX_PAGES_PER_BATCH):
                 batch_end = min(batch_start + MAX_PAGES_PER_BATCH, total_pages)
-                print(f"  Processing pages {batch_start + 1}-{batch_end}...")
+                print(f"Processing batch {batch_start + 1}-{batch_end}...")
+                
+                # Step 1: Pre-read pages and extract images in Main Thread (I/O Bound)
+                tasks_to_process = []
                 
                 for page_num in range(batch_start, batch_end):
                     try:
                         page = reader.pages[page_num]
+                        text = sanitize_text(page.extract_text() or "")
                         
-                        # Try to extract text normally
-                        text = page.extract_text()
-                        text = sanitize_text(text)
-                        
-                        # Check if page needs OCR (insufficient text + has images)
-                        needs_ocr = len(text.strip()) < MIN_TEXT_THRESHOLD
-                        
-                        if needs_ocr and has_images(page):
-                            print(f"!Page {page_num + 1}: Low text detected, attempting OCR...")
-                            
-                            # Extract images and perform OCR
+                        # Determine if OCR is needed
+                        # Condition: Text is short AND page has images
+                        if len(text.strip()) < MIN_TEXT_THRESHOLD and has_images(page):
                             images = extract_images_from_page(page)
-                            ocr_texts = []
-                            
-                            for img_bytes in images:
-                                ocr_text = extract_text_from_image(img_bytes)
-                                if ocr_text:
-                                    ocr_texts.append(ocr_text)
-                            
-                            if ocr_texts:
-                                # Combine original text with OCR text
-                                combined_text = text + "\n" + "\n".join(ocr_texts)
-                                text = clean_text(combined_text)
-                                ocr_pages_count += 1
-                                print(f"!OCR extracted {len(text)} characters from page {page_num + 1}")
+                            if images:
+                                # Queue for parallel OCR
+                                tasks_to_process.append((page_num + 1, text, images))
                             else:
-                                print(f"!OCR found no text on page {page_num + 1}")
-                        
-                        # Clean text
-                        text = clean_text(text)
-                        
-                        all_pages_text.append({
-                            "page_num": page_num + 1,
-                            "text": text,
-                            "ocr_used": needs_ocr and len(text) > MIN_TEXT_THRESHOLD
-                        })
-                        
+                                # Low text but no extractable images found
+                                all_pages_text.append({
+                                    "page_num": page_num + 1,
+                                    "text": clean_text(text),
+                                    "ocr_used": False
+                                })
+                        else:
+                            # Standard text page
+                            all_pages_text.append({
+                                "page_num": page_num + 1,
+                                "text": clean_text(text),
+                                "ocr_used": False
+                            })
+                            
                     except Exception as e:
-                        print(f"!Error extracting page {page_num + 1}: {str(e)}")
-                        all_pages_text.append({
-                            "page_num": page_num + 1,
-                            "text": "",
-                            "ocr_used": False
-                        })
+                        print(f"Error reading page {page_num + 1}: {e}")
+                        all_pages_text.append({"page_num": page_num + 1, "text": "", "ocr_used": False})
+
+                # Step 2: Execute OCR in Parallel (CPU Bound)
+                if tasks_to_process:
+                    print(f"Running parallel OCR on {len(tasks_to_process)} pages with {OCR_WORKERS} threads...")
+                    
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=OCR_WORKERS) as executor:
+                        # Submit tasks
+                        future_to_page = {
+                            executor.submit(process_page_ocr, p_num, txt, imgs): p_num 
+                            for p_num, txt, imgs in tasks_to_process
+                        }
+                        
+                        for future in concurrent.futures.as_completed(future_to_page):
+                            try:
+                                result = future.result()
+                                all_pages_text.append(result)
+                                if result["ocr_used"]:
+                                    ocr_pages_count += 1
+                            except Exception as exc:
+                                print(f"OCR thread exception: {exc}")
+                                # Fallback for failed page
+                                p_num = future_to_page[future]
+                                all_pages_text.append({
+                                    "page_num": p_num, "text": "", "ocr_used": False
+                                })
+
+        # Sort results by page number to restore order
+        all_pages_text.sort(key=lambda x: x["page_num"])
         
         if ocr_pages_count > 0:
-            print(f"!OCR was used on {ocr_pages_count} pages")
+            print(f"Total OCR processed pages: {ocr_pages_count}")
         
         return {
             "pages": all_pages_text,
@@ -197,42 +250,25 @@ def extract_text_from_pdf(pdf_path: str) -> Dict:
         }
     
     except Exception as e:
-        print(f"!Error reading PDF: {str(e)}")
+        print(f"Error processing PDF: {str(e)}")
         raise
 
 def clean_text(text: str) -> str:
     """Clean and normalize extracted text"""
     if not text:
         return ""
-    
-    # First sanitize (remove NUL characters)
     text = sanitize_text(text)
-    
-    # Remove excessive whitespace
     text = re.sub(r'\s+', ' ', text)
-    
-    # Remove page numbers and headers/footers (common patterns)
     text = re.sub(r'\n\s*\d+\s*\n', ' ', text)
-    
-    # Remove hyphenation at line breaks
     text = re.sub(r'-\s+', '', text)
-    
-    # Normalize quotes
     text = text.replace('"', '"').replace('"', '"')
-    text = text.replace(''', "'").replace(''', "'")
-    
+    text = text.replace("'", "'").replace("'", "'")
     return text.strip()
 
 def chunk_text(text_data: Dict) -> List[Dict]:
-    """
-    Create overlapping chunks from PDF text with intelligent splitting.
-    Optimized for large documents (500-1000+ pages).
-    """
+    """Create overlapping chunks from PDF text"""
     chunks = []
     pages = text_data["pages"]
-    total_pages = text_data["total_pages"]
-    
-    print(f"!Chunking {total_pages} pages...")
     
     current_chunk = ""
     current_start_page = 1
@@ -242,11 +278,9 @@ def chunk_text(text_data: Dict) -> List[Dict]:
         page_num = page_data["page_num"]
         page_text = page_data["text"]
         
-        # Skip empty pages
         if not page_text or len(page_text) < 10:
             continue
         
-        # Add page text to current chunk
         if current_chunk:
             current_chunk += " " + page_text
         else:
@@ -255,12 +289,8 @@ def chunk_text(text_data: Dict) -> List[Dict]:
         
         current_end_page = page_num
         
-        # Check if chunk is large enough
         while len(current_chunk) >= CHUNK_SIZE:
-            # Find a good breaking point
             break_point = find_break_point(current_chunk, CHUNK_SIZE)
-            
-            # Extract chunk
             chunk_text = current_chunk[:break_point].strip()
             
             if len(chunk_text) >= MIN_CHUNK_SIZE:
@@ -270,12 +300,10 @@ def chunk_text(text_data: Dict) -> List[Dict]:
                     "end_page": current_end_page
                 })
             
-            # Keep overlap for context
             overlap_start = max(0, break_point - CHUNK_OVERLAP)
             current_chunk = current_chunk[overlap_start:]
-            current_start_page = current_end_page
+            current_start_page = current_end_page # Approximate
     
-    # Add final chunk if it has content
     if current_chunk.strip() and len(current_chunk.strip()) >= MIN_CHUNK_SIZE:
         chunks.append({
             "text": current_chunk.strip(),
@@ -283,100 +311,21 @@ def chunk_text(text_data: Dict) -> List[Dict]:
             "end_page": current_end_page
         })
     
-    print(f"!Created {len(chunks)} chunks from {total_pages} pages")
-    
-    # Log statistics
-    if chunks:
-        avg_chunk_size = sum(len(c["text"]) for c in chunks) / len(chunks)
-        print(f"!Average chunk size: {avg_chunk_size:.0f} characters")
-    else:
-        print("!Warning: No chunks created! PDF may be image-only or corrupted.")
-    
     return chunks
 
 def find_break_point(text: str, target_size: int) -> int:
-    """
-    Find an intelligent breaking point near target_size.
-    Prioritizes breaking at sentence or paragraph boundaries.
-    """
+    """Find smart break point"""
     if len(text) <= target_size:
         return len(text)
     
-    # Look for break points in order of preference
     search_start = max(0, target_size - 200)
     search_end = min(len(text), target_size + 200)
-    search_region = text[search_start:search_end]
+    region = text[search_start:search_end]
     
-    # 1. Try to break at paragraph (double newline)
-    paragraph_break = search_region.rfind('\n\n')
-    if paragraph_break != -1:
-        return search_start + paragraph_break
-    
-    # 2. Try to break at sentence (period, question mark, exclamation)
-    sentence_break = max(
-        search_region.rfind('. '),
-        search_region.rfind('? '),
-        search_region.rfind('! ')
-    )
-    if sentence_break != -1:
-        return search_start + sentence_break + 2
-    
-    # 3. Try to break at newline
-    newline_break = search_region.rfind('\n')
-    if newline_break != -1:
-        return search_start + newline_break
-    
-    # 4. Try to break at space
-    space_break = search_region.rfind(' ')
-    if space_break != -1:
-        return search_start + space_break
-    
-    # 5. Hard break at target_size
+    # Priority: Paragraph -> Sentence -> Newline -> Space
+    for pattern, offset in [('\n\n', 0), ('. ', 2), ('? ', 2), ('! ', 2), ('\n', 0), (' ', 0)]:
+        idx = region.rfind(pattern)
+        if idx != -1:
+            return search_start + idx + offset
+            
     return target_size
-
-def get_document_summary(text_data: Dict, max_length: int = 500) -> str:
-    """
-    Generate a quick summary of the document for display purposes.
-    Useful for large documents.
-    """
-    pages = text_data["pages"]
-    total_pages = text_data["total_pages"]
-    
-    # Get text from first few pages
-    summary_text = ""
-    for page_data in pages[:5]:  # First 5 pages
-        summary_text += page_data["text"] + " "
-        if len(summary_text) >= max_length * 2:
-            break
-    
-    # Truncate to max_length
-    if len(summary_text) > max_length:
-        summary_text = summary_text[:max_length] + "..."
-    
-    return summary_text.strip()
-
-def estimate_processing_time(total_pages: int, has_ocr: bool = False) -> int:
-    """
-    Estimate processing time in seconds based on page count.
-    Helps set appropriate timeouts.
-    """
-    # Rough estimates:
-    # - 100 pages: ~30 seconds (text-only)
-    # - 500 pages: ~2.5 minutes (text-only)
-    # - 1000 pages: ~5 minutes (text-only)
-    # OCR adds significant overhead: ~5-10 seconds per page
-    
-    base_time = 10  # Base overhead
-    
-    if has_ocr:
-        time_per_page = 7.0  # Much slower with OCR
-    else:
-        time_per_page = 0.3  # Seconds per page for text extraction
-    
-    estimated = base_time + (total_pages * time_per_page)
-    
-    # Add buffer for very large documents
-    if total_pages > 500:
-        estimated *= 1.2
-    
-    return int(estimated)

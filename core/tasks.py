@@ -18,7 +18,7 @@ def process_upload(self, upload_id):
     """
     try:
         upload = Upload.objects.get(id=upload_id)
-        print(f"📄 Processing upload {upload_id}: {upload.filename}")
+        print(f"Processing upload {upload_id}: {upload.filename}")
         
         # Update status
         upload.status = "processing"
@@ -31,7 +31,7 @@ def process_upload(self, upload_id):
         # Check if OCR was used
         ocr_pages = text_data.get("ocr_pages", 0)
         if ocr_pages > 0:
-            print(f"✅ OCR was used on {ocr_pages} pages (en + th)")
+            print(f"OCR was used on {ocr_pages} pages (en + th)")
             self.update_state(
                 state='PROCESSING',
                 meta={
@@ -45,7 +45,7 @@ def process_upload(self, upload_id):
         total_chunks = len(chunks)
         
         if total_chunks == 0:
-            print(f"⚠️ No chunks extracted from {upload.filename}")
+            print(f"No chunks extracted from {upload.filename}")
             upload.status = "failed"
             upload.save()
             return {
@@ -53,7 +53,7 @@ def process_upload(self, upload_id):
                 "error": "No text extracted. File may be corrupted or empty."
             }
         
-        print(f"📦 Created {total_chunks} chunks from {text_data['total_pages']} pages")
+        print(f"Created {total_chunks} chunks from {text_data['total_pages']} pages")
         
         # Delete existing chunks
         Chunk.objects.filter(upload=upload).delete()
@@ -68,9 +68,9 @@ def process_upload(self, upload_id):
         # Delete existing vectors
         try:
             vector_store.delete(filter={"upload_id": upload.id})
-            print(f"🗑️ Deleted existing vectors for upload {upload.id}")
+            print(f"Deleted existing vectors for upload {upload.id}")
         except Exception as e:
-            print(f"⚠️ Could not delete vectors: {str(e)}")
+            print(f"Could not delete vectors: {str(e)}")
         
         # Update metadata with OCR info
         upload.pages = text_data["total_pages"]
@@ -153,7 +153,7 @@ def process_upload(self, upload_id):
                         metadatas=batch_metadatas
                     )
                     processed += len(batch_texts)
-                    print(f"✅ Batch {batch_start//BATCH_SIZE + 1}: {len(batch_texts)} chunks ({processed}/{total_chunks})")
+                    print(f"Batch {batch_start//BATCH_SIZE + 1}: {len(batch_texts)} chunks ({processed}/{total_chunks})")
                     
                     # Update progress
                     self.update_state(
@@ -185,13 +185,13 @@ def process_upload(self, upload_id):
             "ocr_used": ocr_pages > 0
         }
         
-        print(f"✅ Successfully processed {upload.filename}")
+        print(f"   Successfully processed {upload.filename}")
         print(f"   Pages: {text_data['total_pages']}, Chunks: {processed}, OCR: {ocr_pages} pages")
         
         return result
         
     except Exception as e:
-        print(f"❌ Error processing upload {upload_id}: {str(e)}")
+        print(f"Error processing upload {upload_id}: {str(e)}")
         import traceback
         traceback.print_exc()
         
@@ -204,7 +204,7 @@ def process_upload(self, upload_id):
         
         # Retry logic
         if self.request.retries < self.max_retries:
-            print(f"🔄 Retrying ({self.request.retries + 1}/{self.max_retries})...")
+            print(f"Retrying ({self.request.retries + 1}/{self.max_retries})...")
             raise self.retry(exc=e, countdown=10 * (2 ** self.request.retries))
         
         raise
@@ -221,7 +221,7 @@ def check_ocr_availability():
     try:
         from .pdf_utils import get_ocr_reader
         
-        print("🔍 Checking OCR availability...")
+        print("Checking OCR availability...")
         
         reader = get_ocr_reader()
         
@@ -235,7 +235,7 @@ def check_ocr_availability():
         # Get supported languages
         languages = reader.lang_list
         
-        print(f"✅ OCR is available with languages: {languages}")
+        print(f"OCR is available with languages: {languages}")
         
         return {
             "available": True,
@@ -244,7 +244,7 @@ def check_ocr_availability():
         }
         
     except Exception as e:
-        print(f"❌ OCR check failed: {str(e)}")
+        print(f"OCR check failed: {str(e)}")
         return {
             "available": False,
             "error": str(e),

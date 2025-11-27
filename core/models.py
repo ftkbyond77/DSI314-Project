@@ -110,13 +110,18 @@ class StudyPlanHistory(models.Model):
     analytics_metadata = models.JSONField(default=dict, blank=True, 
                                          help_text="Flexible JSON field for additional analytics data")
     
+    project_name = models.CharField(max_length=255, blank=True, null=True, help_text="User-defined project name")
+    kanban_state = models.JSONField(default=dict, blank=True, help_text="Saved state of kanban columns")
+    
     def __str__(self):
-        return f"{self.user.username} - {self.created_at.strftime('%Y-%m-%d %H:%M')} ({self.total_files} files)"
+        # Update string representation to show project name
+        name = self.project_name if self.project_name else "Untitled"
+        return f"{name} - {self.user.username} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
     
     def get_schedule(self):
         """Extract schedule from plan_json"""
         for item in self.plan_json:
-            if item.get('file') == '📅 WEEKLY SCHEDULE':
+            if item.get('file') == 'WEEKLY SCHEDULE':
                 return item.get('schedule', [])
         return []
     
@@ -124,7 +129,7 @@ class StudyPlanHistory(models.Model):
         """Extract prioritized tasks from plan_json"""
         return [
             item for item in self.plan_json 
-            if item.get('file') != '📅 WEEKLY SCHEDULE'
+            if item.get('file') != 'WEEKLY SCHEDULE'
         ]
     
     def get_summary(self):
@@ -291,8 +296,8 @@ class QuizQuestion(models.Model):
     # Options
     option_a = models.TextField(help_text="Option A")
     option_b = models.TextField(help_text="Option B")
-    option_c = models.TextField(help_text="Option C")
-    option_d = models.TextField(help_text="Option D")
+    option_c = models.TextField(help_text="Option C", blank=True, null=True)
+    option_d = models.TextField(help_text="Option D", blank=True, null=True)
     
     # Answer
     correct_answer = models.CharField(max_length=1, choices=[
