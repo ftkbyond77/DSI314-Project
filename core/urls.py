@@ -15,6 +15,7 @@ urlpatterns = [
     
     # ==================== HISTORY ====================
     path('history/<int:history_id>/', views_optimized.history_detail, name='history_detail'),
+    path('history/<int:history_id>/delete/', views_optimized.delete_history, name='delete_history'),
     
     # ==================== ASYNC PROGRESS ====================
     path('planning-progress/', views_optimized.planning_progress, name='planning_progress'),
@@ -35,6 +36,7 @@ urlpatterns = [
     path('quiz/<int:quiz_id>/submit/', views_quiz.submit_quiz, name='submit_quiz'),
     path('quiz/<int:quiz_id>/results/', views_quiz.quiz_results, name='quiz_results'),
     path('quiz/history/', views_quiz.quiz_history, name='quiz_history'),
+    path('quiz/<int:quiz_id>/delete/', views_quiz.delete_quiz, name='delete_quiz'),
     
     
     # ==================== FEEDBACK SYSTEM ====================

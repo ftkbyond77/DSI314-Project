@@ -189,3 +189,21 @@ def quiz_history(request):
     return render(request, 'core/quiz_history.html', {
         'quizzes': quizzes
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_quiz(request, quiz_id):
+    """Delete a quiz session and its related questions/answers.
+
+    Only the owner may delete their quiz session. Uses POST to avoid accidental deletion.
+    """
+    quiz = QuizSession.objects.filter(id=quiz_id, user=request.user).first()
+    if not quiz:
+        messages.error(request, 'Quiz not found or access denied.')
+        return redirect('upload_page_optimized')
+
+    # Delete the quiz session (cascades to questions/answers)
+    quiz.delete()
+    messages.success(request, 'Quiz history deleted.')
+    return redirect('upload_page_optimized')

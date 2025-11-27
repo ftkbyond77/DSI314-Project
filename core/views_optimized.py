@@ -422,6 +422,25 @@ def history_detail(request, history_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def delete_history(request, history_id):
+    """Soft-delete a StudyPlanHistory by marking its status as 'deleted'.
+
+    Only the owner may delete their history. Uses POST to avoid accidental GET deletions.
+    """
+    history = StudyPlanHistory.objects.filter(id=history_id, user=request.user).first()
+    if not history:
+        messages.error(request, 'History not found or access denied.')
+        return redirect('upload_page_optimized')
+
+    # Soft delete by updating status; keep record for analytics/audit
+    history.status = 'deleted'
+    history.save(update_fields=['status'])
+    messages.success(request, 'Study plan history deleted.')
+    return redirect('upload_page_optimized')
+
+
+@login_required
 def agent_logs(request):
     """Admin logs"""
     if not request.user.is_staff:
