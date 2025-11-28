@@ -1,23 +1,21 @@
-# 3.11 to support newer libraries
 FROM python:3.11-slim
 
-# Ensure python output is sent straight to terminal
 ENV PYTHONUNBUFFERED=1
-
 WORKDIR /app
 
-# Copy requirements first to leverage Docker layer caching
-COPY requirements.txt .
+# Install system dependencies for PDF and OCR
+RUN apt-get update && apt-get install -y \
+    poppler-utils \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip, setuptools, wheel and install dependencies
+COPY requirements.txt .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt
 
-# Copy the rest of the application
 COPY . .
 
-# Collect static files during build
 RUN python manage.py collectstatic --noinput
 
-# Run the application
-CMD ["gunicorn", "student_assistant.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "student_assistant.wsgi:application", "--bind", "0.0.0.0:80"]
