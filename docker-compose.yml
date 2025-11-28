@@ -1,27 +1,25 @@
 services:
   db:
     image: postgres:16
+    restart: always
     env_file:
       - .env
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    restart: always
 
   web:
     build: .
+    restart: always
     command: 
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
              gunicorn student_assistant.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 300 --max-requests 1000"
     volumes:
-      - .:/app
-      - ./staticfiles:/app/staticfiles
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
       - "8000:8000"
@@ -33,10 +31,9 @@ services:
 
   worker:
     build: .
+    restart: always
     command: celery -A student_assistant worker -l info
     volumes:
-      - .:/app
-      - ./staticfiles:/app/staticfiles
       - media_volume:/app/media
     env_file:
       - .env
