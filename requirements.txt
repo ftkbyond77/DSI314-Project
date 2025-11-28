@@ -20,3 +20,4 @@ easyocr
 Pillow
 pydantic==2.9.2  
 pydantic-settings==2.5.2
+dj-database-url>=2.1.0
