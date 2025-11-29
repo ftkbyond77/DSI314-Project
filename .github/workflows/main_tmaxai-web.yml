@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy container app to Azure Web App - tmaxai-web
 
 on:
@@ -13,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -21,31 +18,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to container registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          registry: mcr.microsoft.com/
-          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_40D97558854743729F401928CD8BC4B3 }}
-          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_2FFA52CE02D14F0FB66113319CC27E40 }}
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push container image to registry
+      - name: Build and push container image to Docker Hub
         uses: docker/build-push-action@v3
         with:
           context: .
           push: true
-          tags: mcr.microsoft.com/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_40D97558854743729F401928CD8BC4B3 }}/appsvc/staticsite:${{ github.sha }}
+          # Matches your Docker Hub repo: ftkbyond77/tmaxai-web
+          tags: index.docker.io/ftkbyond77/tmaxai-web:${{ github.sha }}
           file: ./Dockerfile
 
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
     needs: build
-    
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -59,5 +55,5 @@ jobs:
         with:
           app-name: 'tmaxai-web'
           slot-name: 'Production'
-          images: 'mcr.microsoft.com/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_40D97558854743729F401928CD8BC4B3 }}/appsvc/staticsite:${{ github.sha }}'
-          
+          # Tells Azure to pull the specific image we just built
+          images: 'index.docker.io/ftkbyond77/tmaxai-web:${{ github.sha }}'
