@@ -3,7 +3,6 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Install system dependencies for PDF and OCR
 RUN apt-get update && apt-get install -y \
     poppler-utils \
     libgl1 \
@@ -18,4 +17,4 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "student_assistant.wsgi:application", "--bind", "0.0.0.0:80"]
+CMD ["gunicorn", "student_assistant.wsgi:application", "--bind", "0.0.0.0:${PORT:-80}", "--workers", "3", "--timeout", "120"]
