@@ -1,7 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy container app to Azure Web App - tmaxai-web
+name: Build and Deploy to Azure Web App
 
 on:
   push:
@@ -9,55 +6,59 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: tmaxai314      
+  ACR_LOGIN_SERVER: tmaxai314.azurecr.io 
+  IMAGE_NAME: tmaxai-assistant:v2   
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Log in to container registry
+      - name: Log in to Azure Container Registry
         uses: docker/login-action@v2
         with:
-          registry: docker.io/
-          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_DE0F94077DEB4FA8BFD1C733A1528977 }}
-          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_01299D8F757E4ACAA0D5FF2F49BBDD65 }}
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build and push container image to registry
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v3
         with:
           context: .
-          push: true
-          tags: docker.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_DE0F94077DEB4FA8BFD1C733A1528977 }}/ftkbyond77/tmaxai-web:${{ github.sha }}
           file: ./Dockerfile
+          push: true
+          # We push two tags: one unique (SHA) for history, one 'latest' for convenience
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          # Use caching to speed up future builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
     needs: build
-    
-    steps:
-      
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1B2478B1E183436782A2CC32C5B421F4 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_293862D50BA2410F8F3537C387BC35F0 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D1A9ECD44673424FA8CE53CC64C19943 }}
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
+    steps:
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'tmaxai-web'
-          slot-name: 'Production'
-          images: 'docker.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_DE0F94077DEB4FA8BFD1C733A1528977 }}/ftkbyond77/tmaxai-web:${{ github.sha }}'
-          
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          # The Publish Profile is the most reliable way to connect to a newly created app
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} 
+          # Tell Azure exactly which image to pull
+          images: '${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
