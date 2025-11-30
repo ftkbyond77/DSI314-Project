@@ -3,7 +3,7 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "🚀 Starting deployment script..."
+echo "tStarting deployment script..."
 
 # 1. LINK MEDIA FILES TO PERSISTENT STORAGE (Azure /home directory)
 # Azure Web Apps persist data in /home. We link /app/media to /home/media

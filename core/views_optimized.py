@@ -36,12 +36,8 @@ def _bucket_tasks_kanban(tasks, kanban_state=None):
     Bucket tasks. If kanban_state is provided (saved plan), use that.
     Otherwise use default logic.
     """
-    # Create a map for easy lookup. 
-    # Normalizing keys to ensure robust matching (though file names should be exact)
     task_map = {t.get('file'): t for t in tasks}
     
-    # 1. IF SAVED STATE EXISTS (Check if it's not None and is a dict)
-    # We remove the implicit boolean check (if kanban_state) because {} is False
     if kanban_state is not None and isinstance(kanban_state, dict) and len(kanban_state) > 0:
         columns = {
             'high_quality': [],
@@ -49,26 +45,22 @@ def _bucket_tasks_kanban(tasks, kanban_state=None):
             'validated': []
         }
         
-        # Distribute tasks based on saved ids
         found_tasks = set()
         
         for col_name, task_names in kanban_state.items():
             if col_name in columns:
                 for name in task_names:
-                    # Clean the name just in case of weird whitespace from frontend
                     clean_name = name.strip() if name else ""
                     if clean_name in task_map:
                         columns[col_name].append(task_map[clean_name])
                         found_tasks.add(clean_name)
         
-        # If any tasks were not found in state (e.g. new files), add to backlog
         for name, task in task_map.items():
             if name not in found_tasks:
                 columns['back_log'].append(task)
                 
         return columns
 
-    # 2. DEFAULT LOGIC (If no save exists)
     columns = {
         'high_quality': [],
         'back_log': [],
@@ -158,37 +150,13 @@ def upload_page_optimized(request):
                 upload_ids.append(upload.id)
                 print(f"New upload: {file.name} ({file_size_mb:.1f}MB)")
         
+        # Trigger processing for new uploads IMMEDIATELY without waiting
         for upload in new_uploads:
             process_upload.delay(upload.id)
         
-        if total_size > 50:
-            messages.info(
-                request,
-                f'Processing {len(new_uploads)} large files ({total_size:.1f}MB). Running in background.'
-            )
-        
-        if new_uploads:
-            start = time.time()
-            quick_timeout = min(30, MAX_WAIT_TIME)
-            
-            while time.time() - start < quick_timeout:
-                all_done = all(
-                    Upload.objects.get(id=u.id).status in ['processed', 'failed']
-                    for u in new_uploads
-                )
-                
-                if all_done:
-                    print(f"Fast processing: {time.time() - start:.1f}s")
-                    break
-                
-                time.sleep(1)
-            
-            for u in new_uploads:
-                u.refresh_from_db()
-                if u.status == 'failed':
-                    messages.error(request, f"Failed to process: {u.filename}")
-                elif u.status != 'processed':
-                    messages.warning(request, f"Still processing: {u.filename}")
+        # REMOVED: The waiting loop logic (Wait for files to process) has been removed.
+        # This ensures the user is redirected to the progress page immediately.
+        # The background task (generate_optimized_plan_async) already handles waiting for these files (Phase 0).
         
         print(f"Launching agentic planning (batch mode, AI extraction)...")
         
@@ -218,6 +186,7 @@ def upload_page_optimized(request):
             f'AI analysis started for {len(files)} files using {sort_method} method.'
         )
         
+        # Redirect immediately to the progress page
         return redirect('planning_progress')
     
     user_uploads = Upload.objects.filter(
@@ -318,7 +287,6 @@ def result_page_optimized(request):
         metadata = {}
         
         for item in plan:
-            # Exclude #0 WEEKLY SCHEDULE from tasks
             if (item.get('file') in ['WEEKLY SCHEDULE', 'WEEKLY SCHEDULE'] 
                 or item.get('priority') == 0):
                 
@@ -426,7 +394,6 @@ def history_detail(request, history_id):
     tasks = history.get_tasks()
     schedule = history.get_schedule()
     
-    # Filter out schedule items from tasks if they snuck in
     tasks = [
         t for t in tasks 
         if t.get('file') not in ['WEEKLY SCHEDULE', 'WEEKLY SCHEDULE']
@@ -550,7 +517,6 @@ def save_plan_state(request, history_id):
         history = StudyPlanHistory.objects.get(id=history_id, user=request.user)
         data = json.loads(request.body)
         
-        # Expecting { 'high_quality': [...], 'back_log': [...], 'validated': [...] }
         history.kanban_state = data
         history.save(update_fields=['kanban_state'])
         
