@@ -1,12 +1,44 @@
-FROM python:3.11-slim
+# ==========================================
+# STAGE 1: Builder (Compiles and installs)
+# ==========================================
+FROM python:3.11-slim AS builder
 
-# Prevent Python from writing pyc files and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies (compilers needed for some python packages)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment to install dependencies into
+RUN python -m venv /opt/venv
+# Enable the virtual environment for subsequent commands
+ENV PATH="/opt/venv/bin:$PATH"
+
+# 1. Install CPU-only PyTorch first (The heavy hitter)
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# 2. Install the rest of the requirements
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ==========================================
+# STAGE 2: Runtime (Final Clean Image)
+# ==========================================
+FROM python:3.11-slim
+
+# Prevent Python from writing pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install ONLY the runtime system libraries needed for your app
+# (poppler-utils for PDF, libgl1 for EasyOCR/OpenCV)
 RUN apt-get update && apt-get install -y \
     poppler-utils \
     libgl1 \
@@ -14,20 +46,21 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+# Copy the virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
 
-# Copy project files
+# Enable the virtual environment in the final image
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy your application code
 COPY . .
 
-# Copy and setup the startup script
+# Setup and permissions for startup script
 COPY startup.sh /app/startup.sh
 RUN chmod +x /app/startup.sh
 
-# Open the port (Azure uses 8000 by default for custom containers)
+# Expose port
 EXPOSE 8000
 
-# Use the startup script as the command
+# Start command
 CMD ["/app/startup.sh"]
