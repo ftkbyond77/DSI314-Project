@@ -9,7 +9,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: tmaxai314      
   ACR_LOGIN_SERVER: tmaxai314.azurecr.io 
-  IMAGE_NAME: tmaxai-assistant:v2   
+  IMAGE_NAME: tmaxai-assistant 
 
 jobs:
   build:
@@ -37,11 +37,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # We push two tags: one unique (SHA) for history, one 'latest' for convenience
           tags: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
-          # Use caching to speed up future builds
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -58,7 +56,5 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          # The Publish Profile is the most reliable way to connect to a newly created app
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }} 
-          # Tell Azure exactly which image to pull
           images: '${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
