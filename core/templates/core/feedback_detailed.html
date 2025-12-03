@@ -8,186 +8,64 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-            min-height: 100vh;
-        }
-        
-        .gradient-primary {
-            background: linear-gradient(135deg, #0e244d 0%, #0b356c 100%);
-        }
-        
-        .card-white {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            padding: 2.5rem;
-        }
-        
-        .star-btn {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .star-btn:hover {
-            transform: scale(1.1);
-        }
-        
-        .star-selected {
-            color: #fbbf24 !important;
-        }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%); }
+        .star-selected { color: #fbbf24; }
+        .star-btn { transition: transform 0.2s; }
+        .star-btn:hover { transform: scale(1.1); }
     </style>
 </head>
-<body>
-    <!-- Header -->
-    <div class="gradient-primary text-white">
-        <div class="max-w-7xl mx-auto px-6 py-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold mb-2">Provide Detailed Feedback</h1>
-                    <p class="text-blue-100">Help us improve your study planning experience</p>
+<body class="min-h-screen p-6">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+        <h1 class="text-3xl font-bold mb-2 text-slate-800">Detailed Feedback</h1>
+        <p class="text-slate-500 mb-8">Help us improve the AI prioritization for your plan.</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="mb-8 text-center">
+                <label class="block text-lg font-bold text-gray-800 mb-4">Overall Rating</label>
+                <div class="flex justify-center gap-3">
+                    <button type="button" class="star-btn text-5xl text-gray-300" data-rating="1">&#9733;</button>
+                    <button type="button" class="star-btn text-5xl text-gray-300" data-rating="2">&#9733;</button>
+                    <button type="button" class="star-btn text-5xl text-gray-300" data-rating="3">&#9733;</button>
+                    <button type="button" class="star-btn text-5xl text-gray-300" data-rating="4">&#9733;</button>
+                    <button type="button" class="star-btn text-5xl text-gray-300" data-rating="5">&#9733;</button>
                 </div>
-                <a href="{% url 'history_detail' history_id=study_plan.id %}" 
-                   class="bg-white text-blue-900 px-6 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-all">
-                    Back to Plan
-                </a>
+                <input type="hidden" name="star_rating" id="starRatingValue" value="0" required>
             </div>
-        </div>
-    </div>
-    
-    <!-- Main Content -->
-    <div class="max-w-3xl mx-auto px-6 py-8">
-        <div class="card-white">
-            <form method="POST">
-                {% csrf_token %}
-                
-                <!-- Overall Rating -->
-                <div class="mb-8">
-                    <label class="block text-lg font-bold text-gray-800 mb-4">Overall Rating</label>
-                    <div class="flex gap-2" id="starRating">
-                        <button type="button" class="star-btn text-5xl text-gray-300" data-rating="1">★</button>
-                        <button type="button" class="star-btn text-5xl text-gray-300" data-rating="2">★</button>
-                        <button type="button" class="star-btn text-5xl text-gray-300" data-rating="3">★</button>
-                        <button type="button" class="star-btn text-5xl text-gray-300" data-rating="4">★</button>
-                        <button type="button" class="star-btn text-5xl text-gray-300" data-rating="5">★</button>
-                    </div>
-                    <input type="hidden" name="star_rating" id="starRatingValue" value="0" required>
-                    <p class="text-sm text-gray-500 mt-2">Click to rate from 1 to 5 stars</p>
-                </div>
-                
-                <!-- Aspect Ratings -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Rate Specific Aspects</h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Priority Accuracy -->
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Priority Accuracy</label>
-                            <select name="aspect_urgency" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="5">Excellent - Perfect prioritization</option>
-                                <option value="4">Good - Mostly accurate</option>
-                                <option value="3" selected>Average - Some issues</option>
-                                <option value="2">Poor - Many issues</option>
-                                <option value="1">Very Poor - Completely wrong</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Schedule Quality -->
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Schedule Quality</label>
-                            <select name="aspect_schedule" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="5">Excellent - Perfect schedule</option>
-                                <option value="4">Good - Workable schedule</option>
-                                <option value="3" selected>Average - Some improvements needed</option>
-                                <option value="2">Poor - Difficult to follow</option>
-                                <option value="1">Very Poor - Unusable</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Complexity Assessment -->
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Complexity Assessment</label>
-                            <select name="aspect_complexity" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="5">Excellent - Spot on</option>
-                                <option value="4">Good - Mostly accurate</option>
-                                <option value="3" selected>Average - Some misjudgments</option>
-                                <option value="2">Poor - Often wrong</option>
-                                <option value="1">Very Poor - Completely off</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Content Relevance -->
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Content Relevance</label>
-                            <select name="aspect_relevance" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="5">Excellent - Very relevant</option>
-                                <option value="4">Good - Mostly relevant</option>
-                                <option value="3" selected>Average - Some irrelevant parts</option>
-                                <option value="2">Poor - Much irrelevant content</option>
-                                <option value="1">Very Poor - Not relevant</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Comments -->
-                <div class="mb-8">
-                    <label class="block text-lg font-bold text-gray-800 mb-2">Additional Comments (Optional)</label>
-                    <textarea name="feedback_text" 
-                              rows="5" 
-                              class="w-full border border-gray-300 rounded-lg px-4 py-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                              placeholder="Share any specific feedback, suggestions, or issues you encountered..."></textarea>
-                    <p class="text-sm text-gray-500 mt-2">Your detailed feedback helps us improve the AI algorithms</p>
-                </div>
-                
-                <!-- Submit Buttons -->
-                <div class="flex gap-4">
-                    <button type="submit" 
-                            class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-bold py-3.5 rounded-lg hover:shadow-lg transition-all">
-                        Submit Feedback
-                    </button>
-                    <a href="{% url 'history_detail' history_id=study_plan.id %}" 
-                       class="px-8 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3.5 rounded-lg transition-all text-center">
-                        Cancel
-                    </a>
-                </div>
-            </form>
-        </div>
+            
+            <div class="mb-8">
+                <label class="block text-lg font-bold text-gray-800 mb-2">Comments</label>
+                <textarea name="feedback_text" rows="5" class="w-full border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="What did you like or dislike?"></textarea>
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg">
+                Submit Feedback
+            </button>
+        </form>
     </div>
     
     <script>
-    // Star Rating System
-    let selectedRating = 0;
-    const starButtons = document.querySelectorAll('.star-btn');
-    const ratingInput = document.getElementById('starRatingValue');
-    
-    starButtons.forEach((btn, index) => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            selectedRating = parseInt(this.dataset.rating);
-            ratingInput.value = selectedRating;
-            
-            // Update star display
-            starButtons.forEach((star, i) => {
-                if (i < selectedRating) {
-                    star.classList.remove('text-gray-300');
-                    star.classList.add('star-selected');
-                } else {
-                    star.classList.remove('star-selected');
-                    star.classList.add('text-gray-300');
-                }
+        const stars = document.querySelectorAll('.star-btn');
+        const input = document.getElementById('starRatingValue');
+        
+        stars.forEach((star, index) => {
+            star.addEventListener('click', () => {
+                const rating = index + 1;
+                input.value = rating;
+                stars.forEach((s, i) => {
+                    s.classList.toggle('star-selected', i < rating);
+                    s.classList.toggle('text-gray-300', i >= rating);
+                });
             });
         });
-    });
-    
-    // Form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        if (selectedRating === 0) {
-            e.preventDefault();
-            alert('Please select a star rating before submitting.');
-        }
-    });
+        
+        document.querySelector('form').addEventListener('submit', (e) => {
+            if(input.value == 0) {
+                e.preventDefault();
+                alert('Please select a star rating.');
+            }
+        });
     </script>
 </body>
 </html>

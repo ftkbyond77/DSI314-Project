@@ -1,4 +1,4 @@
-# core/views_feedback.py - ปรับให้ใช้ ?feedback=success แทน messages
+# core/views_feedback.py
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -65,7 +65,7 @@ def quick_feedback_auto(request):
             print(f"Triggering RL (unprocessed: {unprocessed_count})")
             trigger_reinforcement_learning()
         
-        # Redirect ด้วย ?feedback=success
+        # Redirect using ?feedback=success
         redirect_url = f"{reverse('history_detail', args=[study_plan.id])}?feedback=success"
         return redirect(redirect_url)
         
@@ -109,7 +109,7 @@ def quick_feedback(request, plan_id):
             print(f"Triggering RL (unprocessed: {unprocessed_count})")
             trigger_reinforcement_learning()
         
-        # ใช้ ?feedback=success
+        # Redirect using ?feedback=success
         redirect_url = f"{reverse('history_detail', args=[plan_id])}?feedback=success"
         return redirect(redirect_url)
         
@@ -140,7 +140,7 @@ def detailed_feedback_auto(request):
 @login_required
 def detailed_feedback_page(request, plan_id):
     """
-    Detailed feedback form + submission.
+    Detailed feedback form + submission (Fallback if JS disabled).
     """
     try:
         study_plan = get_object_or_404(
@@ -179,7 +179,6 @@ def detailed_feedback_page(request, plan_id):
             if unprocessed_count >= 10:
                 trigger_reinforcement_learning()
             
-            # ใช้ ?feedback=success
             redirect_url = f"{reverse('history_detail', args=[plan_id])}?feedback=success"
             return redirect(redirect_url)
         
@@ -197,7 +196,7 @@ def detailed_feedback_page(request, plan_id):
 @require_http_methods(["POST"])
 def submit_feedback(request):
     """
-    AJAX feedback submission.
+    AJAX feedback submission for the popup modal.
     """
     try:
         data = json.loads(request.body)
@@ -210,12 +209,18 @@ def submit_feedback(request):
             if not study_plan:
                 return JsonResponse({'success': False, 'error': 'No plan found'}, status=400)
         
+        # Ensure star_rating is an integer
+        try:
+            star_rating = int(data.get('star_rating', 0))
+        except (ValueError, TypeError):
+            star_rating = 0
+
         feedback = PrioritizationFeedback.objects.create(
             user=request.user,
             study_plan=study_plan,
             feedback_type=data.get('feedback_type', 'overall'),
             rating_type=data.get('rating_type', 'detailed'),
-            star_rating=data.get('star_rating', 0),
+            star_rating=star_rating,
             feedback_text=data.get('feedback_text', ''),
             aspects=data.get('aspects', {})
         )
@@ -227,11 +232,13 @@ def submit_feedback(request):
         if unprocessed_count >= 10:
             trigger_reinforcement_learning()
         
-        # ส่ง URL กลับไปให้ frontend redirect
+        # Send URL back (used if frontend wants to redirect, but modal usually stays on page)
         redirect_url = f"{reverse('history_detail', args=[study_plan.id])}?feedback=success"
+        
         return JsonResponse({
             'success': True,
             'message': 'Feedback submitted',
+            'plan_id': study_plan.id,
             'redirect_url': redirect_url
         })
         

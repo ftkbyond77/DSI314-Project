@@ -1,4 +1,4 @@
-# core/feedback_system.py - Feedback Collection & Reinforcement Learning
+# core/feedback_system.py
 
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
@@ -35,22 +35,6 @@ class FeedbackCollector:
     ) -> PrioritizationFeedback:
         """
         Collect user feedback and store in database.
-        
-        Args:
-            user: User object
-            study_plan: StudyPlanHistory instance
-            feedback_type: 'priority', 'schedule', 'content', 'overall'
-            rating_type: 'thumbs', 'stars', 'detailed'
-            thumbs_up: True/False for thumbs rating
-            star_rating: 1-5 for star rating
-            feedback_text: Optional text feedback
-            task_name: Specific task being rated
-            task_priority_suggested: User's suggested priority
-            aspects: Dict of specific aspects rated
-            request: Django request object for metadata
-        
-        Returns:
-            PrioritizationFeedback instance
         """
         
         # Collect metadata
@@ -88,7 +72,7 @@ class FeedbackCollector:
         analytics, created = UserAnalytics.objects.get_or_create(user=user)
         analytics.update_from_feedback(feedback)
         
-        print(f"Feedback collected: {feedback}")
+        print(f"Feedback collected: ID {feedback.id} for User {user.username}")
         
         return feedback
     
@@ -129,18 +113,6 @@ class ReinforcementLearningEngine:
         category: str = "",
         force: bool = False
     ) -> List[ScoringModelAdjustment]:
-        """
-        Analyze recent feedback and propose/apply weight adjustments.
-        
-        Args:
-            scope: 'global', 'user', or 'category'
-            user: User object if scope='user'
-            category: Category name if scope='category'
-            force: If True, apply adjustments even with few feedback items
-        
-        Returns:
-            List of ScoringModelAdjustment objects created
-        """
         
         print(f"Analyzing feedback for {scope} scope...")
         
@@ -157,7 +129,7 @@ class ReinforcementLearningEngine:
         feedback_items = list(feedback_query)
         
         if len(feedback_items) < self.min_feedback_count and not force:
-            print(f"⏸Insufficient feedback ({len(feedback_items)}/{self.min_feedback_count})")
+            print(f"Insufficient feedback ({len(feedback_items)}/{self.min_feedback_count})")
             return []
         
         print(f"Processing {len(feedback_items)} feedback items...")
@@ -185,7 +157,7 @@ class ReinforcementLearningEngine:
             )
             adjustment_objects.append(adj_obj)
             
-            print(f"{adj['factor']}: {adj['old_weight']:.3f} → {adj['new_weight']:.3f}")
+            print(f"{adj['factor']}: {adj['old_weight']:.3f} -> {adj['new_weight']:.3f}")
         
         # Mark feedback as processed
         feedback_query.update(processed=True, processed_at=timezone.now())
@@ -434,15 +406,6 @@ def collect_user_feedback(
 ) -> PrioritizationFeedback:
     """
     Main entry point for collecting feedback.
-    
-    Args:
-        user: User object
-        study_plan_id: ID of StudyPlanHistory
-        feedback_data: Dict with feedback details
-        request: Django request object
-    
-    Returns:
-        PrioritizationFeedback instance
     """
     
     from .models import StudyPlanHistory
@@ -468,14 +431,6 @@ def collect_user_feedback(
 def trigger_reinforcement_learning(scope: str = 'global', user=None) -> List[ScoringModelAdjustment]:
     """
     Trigger reinforcement learning to adjust model weights.
-    Can be called periodically or after N feedback items.
-    
-    Args:
-        scope: 'global', 'user', or 'category'
-        user: User object if scope='user'
-    
-    Returns:
-        List of adjustments made
     """
     
     engine = ReinforcementLearningEngine()
@@ -485,19 +440,3 @@ def trigger_reinforcement_learning(scope: str = 'global', user=None) -> List[Sco
         engine.apply_adjustments(adjustments)
     
     return adjustments
-
-
-def get_personalized_weights(user) -> Dict:
-    """
-    Get personalized scoring weights for a user.
-    Falls back to global weights if no personalization exists.
-    
-    Args:
-        user: User object
-    
-    Returns:
-        Dict of factor weights
-    """
-    
-    engine = ReinforcementLearningEngine()
-    return engine.get_active_weights(user=user)
