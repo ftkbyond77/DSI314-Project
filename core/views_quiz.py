@@ -205,5 +205,4 @@ def delete_quiz(request, quiz_id):
 
     # Delete the quiz session (cascades to questions/answers)
     quiz.delete()
-    messages.success(request, 'Quiz history deleted.')
     return redirect('upload_page_optimized')

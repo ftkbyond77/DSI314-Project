@@ -91,21 +91,62 @@
           }
       }">
 
-    <header class="gradient-hero text-white border-b border-slate-200 px-6 py-3 shadow-lg flex-shrink-0 z-50">
-        <div class="flex items-center justify-between w-full">
-            <div class="flex items-center gap-3">
-                <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden bg-white/10 hover:bg-white/20 p-1.5 rounded-lg text-white transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-                <a href="{% url 'upload_page_optimized' %}" class="bg-white/10 hover:bg-white/20 p-1.5 rounded-lg text-white transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </a>
-                <h1 class="text-lg font-bold flex items-center gap-2">Historical Plan
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full history-badge uppercase tracking-wide">Archived</span>
-                </h1>
-            </div>
+    <header class="gradient-hero text-white shadow-2xl border-b border-white/10 relative overflow-hidden">
+        <!-- Subtle background pattern (optional visual flair) -->
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute inset-0" style="background: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"4\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E') repeat;"></div>
+        </div>
+
+        <div class="relative px-6 py-5 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="hidden lg:block text-xs text-blue-100 font-medium">Generated on {{ stats.generated_at|date:"F d, Y at H:i" }}</div>
+                <!-- Mobile Menu + Back Button -->
+                <div class="flex items-center gap-3">
+                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden bg-white/15 hover:bg-white/25 backdrop-blur-sm p-2.5 rounded-xl transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <a href="{% url 'upload_page_optimized' %}#history" class="bg-white/15 hover:bg-white/25 backdrop-blur-sm p-2.5 rounded-xl transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Title + Badges -->
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight flex items-center gap-3">
+                        <span>Historical Study Plan</span>
+                        <span class="bg-indigo-500/30 backdrop-blur-sm text-indigo-100 text-xs font-bold px-3 py-1 rounded-full border border-indigo-400/30 shadow-lg">
+                            ARCHIVED
+                        </span>
+                    </h1>
+                    <p class="text-sm text-blue-100 opacity-90 mt-1 font-medium">
+                        Review past prioritization and schedule
+                    </p>
+                </div>
+            </div>
+
+            <!-- Date + Metadata (Desktop + Mobile) -->
+            <div class="text-right">
+                <div class="hidden lg:flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20">
+                    <svg class="w-4 h-4 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <span class="text-sm font-semibold text-blue-50">
+                        Generated on
+                    </span>
+                    <span class="text-sm font-bold text-white">
+                        {{ stats.generated_at|date:"F j, Y" }}
+                    </span>
+                    <span class="text-xs text-blue-200">at {{ stats.generated_at|time:"g:i A" }}</span>
+                </div>
+
+                <!-- Mobile Compact Version -->
+                <div class="lg:hidden text-xs bg-white/10 backdrop-blur-md px-3 py-2 rounded-lg border border-white/20">
+                    <div class="font-medium text-blue-100">Generated</div>
+                    <div class="font-bold text-white text-sm">{{ stats.generated_at|date:"M j, Y" }}</div>
+                </div>
             </div>
         </div>
     </header>
@@ -133,19 +174,7 @@
                             <span class="text-slate-500 block text-xs font-medium uppercase mb-1">Project Name</span>
                             <span class="font-bold text-slate-800">{{ stats.project_name|default:"Untitled" }}</span>
                         </div>
-                        <div>
-                            <span class="text-slate-500 block text-xs font-medium uppercase mb-1">User ID</span>
-                            <span class="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 border border-slate-200">{{ request.user.id }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-500 block text-xs font-medium uppercase mb-1">Goal</span>
-                            <p class="text-slate-700 leading-snug">{{ stats.user_goal|default:"No goal specified" }}</p>
-                        </div>
                         {% if stats.constraints %}
-                        <div>
-                            <span class="text-slate-500 block text-xs font-medium uppercase mb-1">Prompt / Constraints</span>
-                            <p class="text-slate-600 text-xs italic leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">{{ stats.constraints }}</p>
-                        </div>
                         {% endif %}
                     </div>
                 </section>
@@ -158,7 +187,7 @@
                         <div class="p-3 bg-slate-50 rounded-xl border border-slate-100"><div class="text-2xl font-bold text-slate-800">{{ stats.total_hours }}h</div><div class="text-xs text-slate-500 font-medium">Study Time</div></div>
                         <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 col-span-2">
                             <div class="flex items-center gap-2 mb-1"><span class="w-2 h-2 rounded-full bg-purple-500"></span><div class="text-xs text-slate-500 font-medium uppercase">Original Goal</div></div>
-                            <div class="text-sm font-bold text-slate-800 italic">"{{ stats.user_goal }}"</div>
+                            <div class="text-sm font-bold text-slate-800 italic">"{{ stats.user_goal|default:"No goal specified" }}</div>
                         </div>
                     </div>
                 </section>
@@ -238,14 +267,35 @@
                         <div class="space-y-4">
                         {% for slot in schedule %}
                             <div class="flex gap-3 text-sm border-b border-slate-50 pb-3 last:border-0 group">
-                                <div class="w-12 font-bold text-slate-400 text-xs py-1 group-hover:text-purple-500 transition-colors">{{ slot.day|slice:":3" }}</div>
-                                <div class="flex-1"><div class="font-semibold text-slate-700">{{ slot.task }}</div><div class="text-slate-500 text-xs mt-0.5">{{ slot.time }} • {{ slot.hours }}h</div></div>
+                                <div class="w-12 font-bold text-slate-400 text-xs py-1 group-hover:text-purple-500 transition-colors">
+                                    {% if forloop.counter == 1 %}
+                                        1st
+                                    {% elif forloop.counter == 2 %}
+                                        2nd
+                                    {% elif forloop.counter == 3 %}
+                                        3rd
+                                    {% elif forloop.counter == 4 %}
+                                        4th
+                                    {% elif forloop.counter == 5 %}
+                                        5th
+                                    {% elif forloop.counter == 6 %}
+                                        6th
+                                    {% elif forloop.counter == 7 %}
+                                        7th
+                                    {% else %}
+                                        {{ forloop.counter }}th
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-semibold text-slate-700">{{ slot.task }}</div>
+                                </div>
                             </div>
                         {% endfor %}
+
+                            </div>
                         </div>
                     </div>
-                </div>
-                {% endif %}
+                    {% endif %}
 
             </div>
         </main>
@@ -263,7 +313,6 @@
         </form>
 
         <button @click="feedbackModalOpen = true" class="w-[65%] py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
             Rate This Plan
         </button>
     </div>
@@ -346,40 +395,43 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const cols = ['col-high', 'col-backlog', 'col-validated'];
-            cols.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    new Sortable(el, {
-                        group: 'kanban',
-                        animation: 150,
-                        ghostClass: 'sortable-ghost',
-                        dragClass: 'sortable-drag',
-                        // FIX: Use forceFallback for reliable cross-browser dragging
-                        forceFallback: false, 
-                        delay: 0,
-                        onEnd: function() { updateCounts(); }
-                    });
-                }
-            });
-            updateCounts();
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        const cols = ['col-high', 'col-backlog', 'col-validated'];
+        cols.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                new Sortable(el, {
+                    group: 'kanban',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    forceFallback: false,
+                    delay: 0,
 
-        function updateCounts() {
-            document.querySelectorAll('.kanban-col').forEach(col => {
-                const count = col.querySelectorAll('.kanban-card').length;
-                const badge = col.parentElement.querySelector('.count-badge');
-                if (badge) badge.textContent = count;
-                if (col.id === 'col-validated') {
-                    const placeholder = col.querySelector('.empty-placeholder');
-                    if (placeholder) {
-                        if (count === 0) placeholder.classList.remove('hidden');
-                        else placeholder.classList.add('hidden');
-                    }
+                    // ✅ Only allow actual cards to be draggable
+                    draggable: '.kanban-card',
+
+                    onEnd: function() { updateCounts(); }
+                });
+            }
+        });
+        updateCounts();
+    });
+
+    function updateCounts() {
+        document.querySelectorAll('.kanban-col').forEach(col => {
+            const count = col.querySelectorAll('.kanban-card').length;
+            const badge = col.parentElement.querySelector('.count-badge');
+            if (badge) badge.textContent = count;
+            if (col.id === 'col-validated') {
+                const placeholder = col.querySelector('.empty-placeholder');
+                if (placeholder) {
+                    if (count === 0) placeholder.classList.remove('hidden');
+                    else placeholder.classList.add('hidden');
                 }
-            });
-        }
+            }
+        });
+    }
 
         function closeTaskModal() { document.getElementById('taskModal').classList.add('hidden'); }
         function openTaskModal(cardElement) {

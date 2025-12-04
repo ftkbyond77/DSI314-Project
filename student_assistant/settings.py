@@ -29,6 +29,8 @@ if custom_hosts:
     for host in custom_hosts.split(","):
         CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
 
+RUNNING_ON_AZURE = bool(azure_hostname)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -80,9 +82,12 @@ WSGI_APPLICATION = "student_assistant.wsgi.application"
 # Database Configuration
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL", "postgresql://student_user:student_pass@db:5432/student_db"),
+        default=os.getenv(
+            "DATABASE_URL",
+            "postgresql://student_user:student_pass@db:5432/student_db",
+        ),
         conn_max_age=600,
-        ssl_require=True  # Azure Postgres usually requires SSL
+        ssl_require=RUNNING_ON_AZURE,  # ✅ SSL only when WEBSITE_HOSTNAME is present (Azure)
     )
 }
 
