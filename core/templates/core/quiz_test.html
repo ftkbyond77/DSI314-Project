@@ -13,7 +13,7 @@
                 <h1 class="text-2xl font-bold text-slate-800">Quiz: {{ task_name }}</h1>
                 <p class="text-slate-600">Test your knowledge on this topic.</p>
             </div>
-            <a href="{% url 'upload_page_optimized' %}" class="text-blue-600 hover:underline">Back to Home</a>
+            <a href="{% url 'upload_page_optimized' %}#quizzes" class="text-blue-600 hover:underline">Back to Home</a>
         </div>
 
         <form method="POST" action="{% url 'submit_quiz' quiz.id %}">

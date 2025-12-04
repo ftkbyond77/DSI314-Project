@@ -444,7 +444,6 @@ def delete_history(request, history_id):
 
     history.status = 'deleted'
     history.save(update_fields=['status'])
-    messages.success(request, 'Study plan history deleted.')
     return redirect('upload_page_optimized')
 
 
