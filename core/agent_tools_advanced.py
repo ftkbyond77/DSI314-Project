@@ -390,12 +390,12 @@ class EnhancedTaskAnalysisTool(BaseTool):
         # Check cache first (if batch processed)
         if task_name in self._sequential_cache:
             sequential_num = self._sequential_cache[task_name]
-            print(f"   Using cached sequential: {task_name} → {sequential_num}")
+            print(f"   Using cached sequential: {task_name} -> {sequential_num}")
         else:
             # Individual AI extraction
             sequential_num = _extract_sequential_number(task_name)
             self._sequential_cache[task_name] = sequential_num
-            print(f"   AI extracted sequential: {task_name} → {sequential_num}")
+            print(f"   AI extracted sequential: {task_name} -> {sequential_num}")
         
         analysis_dict = {
             'complexity': complexity,
@@ -451,8 +451,7 @@ class EnhancedTaskAnalysisTool(BaseTool):
                     task_analysis=result["analysis"],
                     text_content=content_summary,
                     blend_weight=0.30,
-                    min_confidence=0.30,
-                    enable_knowledge_boost=True
+                    min_confidence=0.30
                 )
                 
                 if 'knowledge_adjusted_score' in result["analysis"]:
@@ -1395,9 +1394,9 @@ Overlap Prevention: Validated, no time conflicts
 Multi-Week Rolling: Tasks distributed across {weeks} week(s)
 
 Optimization Strategy:
-Theory/Exam Prep → Morning slots (8-11am) - peak cognitive performance
-Practical/Workshop → Afternoon (1-5pm) - optimal for hands-on work
-Review sessions → Evening (6-8pm) - memory consolidation period
+Theory/Exam Prep -> Morning slots (8-11am) - peak cognitive performance
+Practical/Workshop -> Afternoon (1-5pm) - optimal for hands-on work
+Review sessions -> Evening (6-8pm) - memory consolidation period
 Flexible durations (0.5h-5h) based on complexity and task type
 Sessions >2.5h automatically split for better retention
 15-minute breaks inserted after intensive sessions

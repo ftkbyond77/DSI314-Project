@@ -106,20 +106,38 @@
     </div>
     {% endif %}
 
-    <header class="gradient-hero text-white border-b border-slate-200 px-6 py-4 shadow-lg relative z-50">
-        <div class="flex items-center justify-between w-full">
+    <header class="gradient-hero text-white shadow-2xl border-b border-white/10 relative overflow-hidden z-50">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute inset-0" style="background: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\'%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'4\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E') repeat;"></div>
+        </div>
+
+        <div class="relative px-6 py-5 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
+                <div class="flex items-center gap-3">
+                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden bg-white/15 hover:bg-white/25 backdrop-blur-sm p-2.5 rounded-xl transition-all text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    
+                    <a href="{% url 'upload_page_optimized' %}" class="bg-white/15 hover:bg-white/25 backdrop-blur-sm p-2.5 rounded-xl transition-all text-white flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </a>
+                </div>
                 
-                <a href="{% url 'upload_page_optimized' %}" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center justify-center">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </a>
+                <div>
+                    <h1 class="text-xl lg:text-2xl font-extrabold tracking-tight flex items-center gap-3">
+                        <span>Optimized Study Plan</span>
+                        <span class="hidden sm:inline-block bg-emerald-500/30 backdrop-blur-sm text-emerald-100 text-xs font-bold px-3 py-1 rounded-full border border-emerald-400/30 shadow-lg">
+                            ACTIVE
+                        </span>
+                    </h1>
+                    <p class="hidden sm:block text-sm text-blue-100 opacity-90 mt-1 font-medium">
+                        AI-prioritized schedule & tasks
+                    </p>
+                </div>
             </div>
             
             <div class="flex items-center gap-3">
-                <a href="{% url 'upload_page_optimized' %}" class="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:bg-blue-100 active:scale-95">New Plan</a>
+                <a href="{% url 'upload_page_optimized' %}" class="bg-white text-slate-900 px-4 py-2 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:bg-blue-50 active:scale-95">New Plan</a>
             </div>
         </div>
     </header>
@@ -128,7 +146,7 @@
         
         <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition.opacity class="fixed inset-0 z-30 bg-black/50 lg:hidden"></div>
 
-        <aside class="fixed inset-y-0 left-0 z-40 w-80 bg-white flex flex-col overflow-y-auto shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+        <aside class="fixed inset-y-0 left-0 z-40 w-80 bg-white flex flex-col overflow-y-auto shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:shadow-[4px_0_24px_rgba(0,0,0,0.02)] border-r border-slate-200"
                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
             
             <div class="flex items-center justify-between p-6 lg:hidden border-b border-slate-100">
@@ -293,6 +311,7 @@
         </form>
 
         <button @click="feedbackModalOpen = true" class="w-[65%] py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+            Rate This Plan
         </button>
     </div>
 

@@ -175,11 +175,11 @@ class HybridSearchEngine:
                     k=top_k
                 )
         except Exception as e:
-            print(f"⚠️ Vector search failed: {e}")
+            print(f"Vector search failed: {e}")
         
         # Phase 2: Keyword fallback if insufficient results
         if len(results) < 3 and fallback_keywords:
-            print(f"   🔄 Fallback to keyword search ({len(results)} results)")
+            print(f"Fallback to keyword search ({len(results)} results)")
             
             try:
                 # Expand query with keywords
@@ -200,10 +200,10 @@ class HybridSearchEngine:
                         results.append((doc, score * 0.9))  # Slight penalty for fallback
                         existing_ids.add(doc_id)
                 
-                print(f"   ✅ Fallback added {len(fallback_results)} results")
+                print(f"Fallback added {len(fallback_results)} results")
                 
             except Exception as e:
-                print(f"⚠️ Keyword fallback failed: {e}")
+                print(f"Keyword fallback failed: {e}")
         
         # Sort by score and return top_k
         results.sort(key=lambda x: x[1], reverse=True)
@@ -515,7 +515,7 @@ Extract the key subtopics:"""
                         expected_subtopics.add(line.lower())
             
             if not expected_subtopics:
-                print("⚠️ LLM subtopic extraction failed, using fallback")
+                print("LLM subtopic extraction failed, using fallback")
                 return EnhancedKnowledgeDepthAnalyzer._heuristic_subtopic_coverage(metadatas)
             
             # Extract subtopics from document metadata
@@ -541,12 +541,12 @@ Extract the key subtopics:"""
             else:
                 coverage = 0.5
             
-            print(f"   📊 Subtopic coverage: {len(found_subtopics)}/{len(expected_subtopics)} = {coverage:.2f}")
+            print(f"Subtopic coverage: {len(found_subtopics)}/{len(expected_subtopics)} = {coverage:.2f}")
             
             return min(coverage, 1.0)
             
         except Exception as e:
-            print(f"⚠️ LLM subtopic extraction failed: {e}")
+            print(f"LLM subtopic extraction failed: {e}")
             # Fallback to heuristic
             return EnhancedKnowledgeDepthAnalyzer._heuristic_subtopic_coverage(metadatas)
     
@@ -984,8 +984,8 @@ class KnowledgeGroundingEngine:
         self.stats_engine = KnowledgeStatisticsEngine(namespace)
         self.feedback_adapter = FeedbackIntegratedWeightAdapter(user)
         
-        print(f"🔍 Knowledge Grounding Engine FINAL")
-        print(f"   All 5 optimizations: ✓")
+        print(f"Knowledge Grounding Engine FINAL")
+        print(f"All 5 optimizations: ✓")
     
     def compute_knowledge_relevance(
         self, 
@@ -1086,12 +1086,12 @@ class KnowledgeGroundingEngine:
                 "timestamp": datetime.now().isoformat()
             }
             
-            print(f"   ✅ Final KR: {final_score:.3f} (base: {base_score:.3f}, conf: {confidence:.3f})")
+            print(f"Final KR: {final_score:.3f} (base: {base_score:.3f}, conf: {confidence:.3f})")
             
             return result
             
         except Exception as e:
-            print(f"❌ KB grounding failed: {e}")
+            print(f"KB grounding failed: {e}")
             import traceback
             traceback.print_exc()
             return self._default_score("error", error=str(e))
@@ -1213,7 +1213,7 @@ def enhance_task_with_knowledge(
         return task_analysis
         
     except Exception as e:
-        print(f"⚠️ KB enhancement failed: {e}")
+        print(f"KB enhancement failed: {e}")
         task_analysis['knowledge_grounding'] = {
             "error": str(e),
             "knowledge_relevance_score": 0.5,
@@ -1232,9 +1232,9 @@ def refresh_knowledge_base_cache():
             "kb_stats_v3_global"
         ])
         
-        print(f"✅ KB cache refresh complete")
+        print(f"KB cache refresh complete")
         return {'status': 'success', 'timestamp': datetime.now().isoformat()}
         
     except Exception as e:
-        print(f"⚠️ KB cache refresh failed: {e}")
+        print(f"KB cache refresh failed: {e}")
         return {'status': 'error', 'error': str(e), 'timestamp': datetime.now().isoformat()}

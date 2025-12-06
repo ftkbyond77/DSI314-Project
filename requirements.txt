@@ -3,7 +3,7 @@ httpx==0.27.2
 httpcore==1.0.6
 
 # AI & Vector DB (Updated for compatibility)
-openai==1.55.3
+openai==1.65.1
 langchain-openai==0.2.9
 langchain-core==0.3.19
 langchain==0.3.7
@@ -24,17 +24,19 @@ psycopg2-binary==2.9.10
 celery==5.4.0
 redis==5.2.0
 
-# PDF & OCR Processing
+# PDF & OCR Processing (OPTIMIZED: PyMuPDF + PaddleOCR)
 PyMuPDF==1.24.11
 pdf2image==1.17.0
-PyPDF2==3.0.1
-easyocr==1.7.2
+paddlepaddle==3.0.0
+paddleocr==3.1.0
+paddlex==3.1.0
+opencv-python-headless==4.9.0.80
 Pillow==11.0.0
+numpy<2.0.0
 
 # Data Validation
 pydantic==2.9.2
 pydantic-settings==2.5.2
 
 # Optional/System utilities
-numpy<2.0.0
 requests==2.32.3

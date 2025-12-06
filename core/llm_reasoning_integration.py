@@ -1,6 +1,5 @@
 # core/llm_reasoning_integration.py - FINAL PRODUCTION
 # LLM-Based Ranking + Full Async + AI Prerequisites Detection
-# High Performance, High Accuracy, Production Grade
 
 from typing import List, Dict, Optional, Tuple
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -76,8 +75,8 @@ You will receive tasks with guidance scores. Your job is to:
         if not tasks:
             return cls._empty_result(user_goal, sort_method)
         
-        # Batch processing
-        batch_size = 5
+        # Batch size set to 10 to ensure all files (up to max limit) are processed together
+        batch_size = 10
         batches = [tasks[i:i + batch_size] for i in range(0, len(tasks), batch_size)]
         
         print(f"LLM ranking {len(tasks)} tasks in {len(batches)} batch(es) [FULL ASYNC]...")
@@ -102,7 +101,6 @@ You will receive tasks with guidance scores. Your job is to:
             else:
                 all_task_reasoning.update(result)
         
-        # Validate and strip wrapper tags to leave clean HTML
         all_task_reasoning, validation_log = cls._validate_and_correct_priorities(
             all_task_reasoning, tasks, sort_method
         )
@@ -146,7 +144,6 @@ You will receive tasks with guidance scores. Your job is to:
                 full_text = response.content.strip()
                 
                 if cls._validate_output_structure(full_text, len(batch)):
-                    # Parse directly to HTML
                     parsed = cls._parse_validated_output_to_html(full_text, batch)
                     if cls._check_no_duplicate_priorities(parsed, batch):
                         return parsed
@@ -182,15 +179,12 @@ You will receive tasks with guidance scores. Your job is to:
 
     @classmethod
     def _check_no_duplicate_priorities(cls, parsed: Dict, batch: List) -> bool:
-        # We assume if it parsed correctly into unique keys, we are good.
-        # Fallback validation happens in _validate_and_correct_priorities
         return True 
 
     @classmethod
     def _parse_validated_output_to_html(cls, output: str, batch: List[Dict]) -> Dict[str, str]:
         """
         Parses XML output and transforms it into 4 distinct styled HTML blocks.
-        Cleans up ** and <> symbols.
         """
         result = {}
         pattern = r'<task_analysis\s+priority="(\d+)">(.*?)</task_analysis>'
@@ -212,11 +206,8 @@ You will receive tasks with guidance scores. Your job is to:
 
             def clean_text(text):
                 if not text: return "No data available."
-                # 1. Remove ANY internal XML tags that might have leaked
                 text = re.sub(r'<[^>]+>', '', text)
-                # 2. Convert Markdown bold (**text**) to HTML bold (<strong class="...">text</strong>)
                 text = re.sub(r'\*\*(.*?)\*\*', r'<strong class="text-slate-900 font-semibold">\1</strong>', text.strip())
-                # 3. Clean up generic symbols if needed (e.g. leading/trailing spaces)
                 return text.strip().replace('\n', '<br>')
 
             # Construct HTML Blocks with Tailwind Classes
@@ -256,26 +247,22 @@ You will receive tasks with guidance scores. Your job is to:
             </div>
             """
 
-            # Fuzzy match to assign to correct task dict
             assigned = False
             for task in batch:
                 if cls._fuzzy_match(task_name_raw, task['task']):
-                    # Wrap in outer tag for validation logic (stripped later)
                     result[task['task']] = f"<task_analysis priority=\"{priority}\">{html_output}</task_analysis>" 
                     assigned = True
                     break
             if not assigned:
-                 # Fallback: assign to task with matching priority
                  for task in batch:
                      if task.get('temp_priority') == priority:
                          result[task['task']] = f"<task_analysis priority=\"{priority}\">{html_output}</task_analysis>"
                          break
         
-        # Fill missing with formatted fallback
         for task in batch:
             if task['task'] not in result:
                 result[task['task']] = cls._generate_fallback_reasoning_wrapper(
-                    task, task.get('temp_priority', 999), user_goal, sort_method
+                    task, task.get('temp_priority', 999), "goals", "hybrid"
                 )
 
         return result
@@ -285,31 +272,13 @@ You will receive tasks with guidance scores. Your job is to:
         corrected = {}
         log = []
         
-        # Extract priorities from the hidden tags before cleaning them
-        llm_priorities = {}
-        for task in tasks:
-            task_name = task['task']
-            reasoning = parsed_reasoning.get(task_name, "")
-            match = re.search(r'<task_analysis\s+priority="(\d+)">', reasoning)
-            if match:
-                llm_priorities[task_name] = int(match.group(1))
-
-        # Check for sequence/gaps (simplified validation logging)
-        priorities_list = sorted(list(llm_priorities.values()))
-        expected = list(range(1, len(tasks) + 1))
-        if priorities_list != expected:
-            log.append(f"Validation corrected priorities. Expected {expected}, got {priorities_list}")
-
-        # Final Cleaning: Remove the <task_analysis> wrappers to leave ONLY HTML
         for task in tasks:
             task_name = task['task']
             reasoning = parsed_reasoning.get(task_name, "")
             
-            # Strip outer tags
             clean_html = re.sub(r'<task_analysis.*?>', '', reasoning).replace('</task_analysis>', '')
             
             if not clean_html.strip():
-                 # Fallback if empty
                  wrapper = cls._generate_fallback_reasoning_wrapper(task, task.get('temp_priority', 999), "goals", sort_method)
                  clean_html = re.sub(r'<task_analysis.*?>', '', wrapper).replace('</task_analysis>', '')
 

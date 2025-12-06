@@ -1,331 +1,238 @@
-# core/pdf_utils.py - OPTIMIZED FOR LARGE PDFs WITH OCR SUPPORT
+# core/pdf_utils.py - OPTIMIZED FOR SPEED (PyMuPDF + PaddleOCR)
 
-import PyPDF2
-from typing import List, Dict
+import fitz  # PyMuPDF
 import re
-from PIL import Image
-import io
+import logging
+import numpy as np
 import concurrent.futures
+from typing import List, Dict, Optional
 
 # ==================== CONFIGURATION ====================
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 MIN_CHUNK_SIZE = 100
-MAX_PAGES_PER_BATCH = 50
-MIN_TEXT_THRESHOLD = 50
-OCR_ENABLED = True
+MIN_TEXT_THRESHOLD = 50  # If text chars < this, we force OCR
+OCR_WORKERS = 2  # Keep low to avoid memory overflow on CPU
+MAX_IMAGE_DIMENSION = 2000 # Max dimension for OCR processing
 
-# OPTIMIZATION SETTINGS
-# Reduced to 800 for max speed while keeping text readable
-MAX_IMAGE_DIMENSION = 800  
-MIN_IMAGE_DIMENSION = 150   
-# Number of concurrent OCR threads (adjusted for typical container limits)
-OCR_WORKERS = 4             
+THAI_REC_MODEL_PATH = "../ocr_th_model"
 
-# Lazy load EasyOCR
-_ocr_reader = None
+# Setup Logging
+logger = logging.getLogger(__name__)
 
-def get_ocr_reader():
-    """Lazy initialization of OCR reader"""
-    global _ocr_reader
-    if _ocr_reader is None:
+# Global OCR Instance (Lazy Loaded)
+_ocr_engine = None
+_ocr_init_failed = False # Prevent repeated failed attempts
+
+def get_ocr_engine():
+    """Lazy initialization of PaddleOCR with specific Thai support"""
+    global _ocr_engine, _ocr_init_failed
+    
+    if _ocr_init_failed:
+        return None
+
+    if _ocr_engine is None:
         try:
-            import easyocr
-            print("Initializing EasyOCR (this may take a moment on first run)...")
-            # gpu=False is default, explicitly set to False for CPU environments
-            _ocr_reader = easyocr.Reader(['en', 'th'], gpu=False) 
-            print("OCR reader initialized")
-        except ImportError:
-            print("EasyOCR not installed. OCR functionality disabled.")
-            return None
+            from paddleocr import PaddleOCR
+            print(f"Initializing PaddleOCR (Using local Thai model from: {THAI_REC_MODEL_PATH})...")
+            
+            _ocr_engine = PaddleOCR(
+                lang="en",                                
+                ocr_version="PP-OCRv5",                  
+                text_recognition_model_dir=THAI_REC_MODEL_PATH,   
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                device="cpu",
+            )
+            print("PaddleOCR initialized successfully.")
         except Exception as e:
-            print(f"Failed to initialize OCR: {str(e)}")
+            print(f"Failed to initialize PaddleOCR: {str(e)}")
+            _ocr_init_failed = True
             return None
-    return _ocr_reader
+    return _ocr_engine
 
 def sanitize_text(text: str) -> str:
-    """Remove NUL characters and other problematic bytes"""
+    """Remove NUL characters and cleanup"""
     if not text:
         return ""
     text = text.replace('\x00', '')
-    return ''.join(char for char in text if ord(char) >= 32 or char in '\t\n\r')
+    return "".join(ch for ch in text if ch.isprintable() or ch in "\n\t\r")
 
-def extract_text_from_image(image_bytes: bytes) -> str:
-    """
-    Extract text from image using OCR with aggressive speed optimizations:
-    1. Grayscale conversion
-    2. Bilinear downscaling to 800px
-    3. Greedy decoding (beamWidth=1)
-    """
-    if not OCR_ENABLED:
+def clean_text(text: str) -> str:
+    """Normalize whitespace and formatting"""
+    if not text:
         return ""
-    
-    reader = get_ocr_reader()
-    if reader is None:
+    text = sanitize_text(text)
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'-\s+', '', text)
+    return text.strip()
+
+def run_paddle_ocr(image_array: np.ndarray) -> str:
+    """Run PaddleOCR on a numpy image array"""
+    engine = get_ocr_engine()
+    if engine is None:
         return ""
     
     try:
-        image = Image.open(io.BytesIO(image_bytes))
+        # result structure: [[[[box], [text, score]], ...]]
+        result = engine.ocr(image_array, cls=True)
         
-        # Optimization 1: Convert to Grayscale (faster processing)
-        if image.mode != 'L':
-            image = image.convert('L')
+        extracted_lines = []
+        if result and result[0]:
+            for line in result[0]:
+                text = line[1][0]
+                # Filter low confidence trash if needed, e.g. if line[1][1] > 0.5
+                extracted_lines.append(text)
         
-        # Optimization 2: Downscale large images using Bilinear (faster than Lanczos)
-        width, height = image.size
-        if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
-            ratio = min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height)
-            new_size = (int(width * ratio), int(height * ratio))
-            image = image.resize(new_size, Image.Resampling.BILINEAR)
+        return " ".join(extracted_lines)
+    except Exception as e:
+        logger.error(f"PaddleOCR execution failed: {e}")
+        return ""
+
+def process_page(page_args) -> Dict:
+    """Worker function to process a single PDF page"""
+    page_num, pdf_path = page_args
+    
+    try:
+        doc = fitz.open(pdf_path)
+        page = doc.load_page(page_num)
         
-        # Optimization 3: Perform OCR with Greedy Decoding
-        # beamWidth=1 disables beam search, significantly speeding up CPU inference
-        # workers=0 prevents nested multiprocessing overhead
-        result = reader.readtext(
-            image, 
-            detail=0, 
-            paragraph=True, 
-            beamWidth=1, 
-            workers=0
-        )
+        # 1. Try direct text extraction (Fastest)
+        raw_text = page.get_text()
+        clean_raw_text = clean_text(raw_text)
         
-        return sanitize_text(' '.join(result))
+        ocr_used = False
+        final_text = clean_raw_text
+
+        # 2. Check heuristics: If text is sparse, it's likely a slide/image
+        if len(clean_raw_text) < MIN_TEXT_THRESHOLD:
+            # Render page to image
+            # matrix=fitz.Matrix(2, 2) = 2x zoom (approx 144 DPI) for speed/quality balance
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            
+            # Convert to Numpy format for Paddle
+            if pix.n < 3:
+                img_data = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
+                import cv2
+                img_data = cv2.cvtColor(img_data, cv2.COLOR_GRAY2RGB)
+            else:
+                img_data = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
+            
+            # Run OCR
+            ocr_text = run_paddle_ocr(img_data)
+            
+            # If OCR found more text than the PDF parser, use it
+            if ocr_text and len(ocr_text) > len(clean_raw_text):
+                final_text = clean_text(ocr_text)
+                ocr_used = True
+        
+        doc.close()
+        
+        return {
+            "page_num": page_num + 1,
+            "text": final_text,
+            "ocr_used": ocr_used
+        }
         
     except Exception as e:
-        print(f"OCR failed: {str(e)}")
-        return ""
-
-def has_images(page) -> bool:
-    """Check if PDF page contains images"""
-    try:
-        if '/XObject' in page['/Resources']:
-            x_objects = page['/Resources']['/XObject'].get_object()
-            for obj in x_objects:
-                if x_objects[obj]['/Subtype'] == '/Image':
-                    return True
-        return False
-    except Exception:
-        return False
-
-def extract_images_from_page(page) -> List[bytes]:
-    """Extract image bytes from PDF page with filtering"""
-    images = []
-    try:
-        if '/XObject' not in page['/Resources']:
-            return images
-        
-        x_objects = page['/Resources']['/XObject'].get_object()
-        
-        for obj in x_objects:
-            if x_objects[obj]['/Subtype'] == '/Image':
-                try:
-                    # Filter out very small images (icons, lines, decorations)
-                    width = x_objects[obj].get('/Width', 0)
-                    height = x_objects[obj].get('/Height', 0)
-                    
-                    if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
-                        continue
-                        
-                    data = x_objects[obj].get_data()
-                    images.append(data)
-                    
-                except Exception as e:
-                    continue
-    except Exception as e:
-        print(f"Image extraction error: {str(e)}")
-    
-    return images
-
-def process_page_ocr(page_num: int, existing_text: str, images: List[bytes]) -> Dict:
-    """
-    Helper function to run in thread pool.
-    Performs OCR on a list of images and merges with existing text.
-    """
-    ocr_text_parts = []
-    for img_bytes in images:
-        text = extract_text_from_image(img_bytes)
-        if text:
-            ocr_text_parts.append(text)
-    
-    final_text = existing_text
-    if ocr_text_parts:
-        final_text += "\n" + "\n".join(ocr_text_parts)
-    
-    final_text = clean_text(final_text)
-    
-    return {
-        "page_num": page_num,
-        "text": final_text,
-        "ocr_used": len(ocr_text_parts) > 0
-    }
+        print(f"Error processing page {page_num + 1}: {e}")
+        return {"page_num": page_num + 1, "text": "", "ocr_used": False}
 
 def extract_text_from_pdf(pdf_path: str) -> Dict:
-    """
-    Extract text from PDF with PARALLEL OCR processing.
-    """
+    """Main extraction function with parallel processing"""
     try:
+        doc = fitz.open(pdf_path)
+        total_pages = len(doc)
+        doc.close()
+        
+        print(f"Starting extraction for {pdf_path} ({total_pages} pages)")
+        
         all_pages_text = []
         ocr_pages_count = 0
-        total_pages = 0
         
-        with open(pdf_path, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            total_pages = len(reader.pages)
-            print(f"PDF has {total_pages} pages")
+        tasks = [(i, pdf_path) for i in range(total_pages)]
+        
+        # ThreadPoolExecutor works well here because Paddle releases GIL during C++ inference
+        with concurrent.futures.ThreadPoolExecutor(max_workers=OCR_WORKERS) as executor:
+            results = list(executor.map(process_page, tasks))
             
-            # Process in batches
-            for batch_start in range(0, total_pages, MAX_PAGES_PER_BATCH):
-                batch_end = min(batch_start + MAX_PAGES_PER_BATCH, total_pages)
-                print(f"Processing batch {batch_start + 1}-{batch_end}...")
-                
-                # Step 1: Pre-read pages and extract images in Main Thread (I/O Bound)
-                tasks_to_process = []
-                
-                for page_num in range(batch_start, batch_end):
-                    try:
-                        page = reader.pages[page_num]
-                        text = sanitize_text(page.extract_text() or "")
-                        
-                        # Determine if OCR is needed
-                        # Condition: Text is short AND page has images
-                        if len(text.strip()) < MIN_TEXT_THRESHOLD and has_images(page):
-                            images = extract_images_from_page(page)
-                            if images:
-                                # Queue for parallel OCR
-                                tasks_to_process.append((page_num + 1, text, images))
-                            else:
-                                # Low text but no extractable images found
-                                all_pages_text.append({
-                                    "page_num": page_num + 1,
-                                    "text": clean_text(text),
-                                    "ocr_used": False
-                                })
-                        else:
-                            # Standard text page
-                            all_pages_text.append({
-                                "page_num": page_num + 1,
-                                "text": clean_text(text),
-                                "ocr_used": False
-                            })
-                            
-                    except Exception as e:
-                        print(f"Error reading page {page_num + 1}: {e}")
-                        all_pages_text.append({"page_num": page_num + 1, "text": "", "ocr_used": False})
-
-                # Step 2: Execute OCR in Parallel (CPU Bound)
-                if tasks_to_process:
-                    print(f"Running parallel OCR on {len(tasks_to_process)} pages with {OCR_WORKERS} threads...")
-                    
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=OCR_WORKERS) as executor:
-                        # Submit tasks
-                        future_to_page = {
-                            executor.submit(process_page_ocr, p_num, txt, imgs): p_num 
-                            for p_num, txt, imgs in tasks_to_process
-                        }
-                        
-                        for future in concurrent.futures.as_completed(future_to_page):
-                            try:
-                                result = future.result()
-                                all_pages_text.append(result)
-                                if result["ocr_used"]:
-                                    ocr_pages_count += 1
-                            except Exception as exc:
-                                print(f"OCR thread exception: {exc}")
-                                # Fallback for failed page
-                                p_num = future_to_page[future]
-                                all_pages_text.append({
-                                    "page_num": p_num, "text": "", "ocr_used": False
-                                })
-
-        # Sort results by page number to restore order
-        all_pages_text.sort(key=lambda x: x["page_num"])
+            for res in results:
+                all_pages_text.append(res)
+                if res["ocr_used"]:
+                    ocr_pages_count += 1
         
         if ocr_pages_count > 0:
-            print(f"Total OCR processed pages: {ocr_pages_count}")
-        
+            print(f"OCR was triggered on {ocr_pages_count} pages.")
+            
         return {
             "pages": all_pages_text,
             "total_pages": total_pages,
             "ocr_pages": ocr_pages_count
         }
-    
+
     except Exception as e:
-        print(f"Error processing PDF: {str(e)}")
+        print(f"Critical error in PDF extraction: {str(e)}")
         raise
 
-def clean_text(text: str) -> str:
-    """Clean and normalize extracted text"""
-    if not text:
-        return ""
-    text = sanitize_text(text)
-    text = re.sub(r'\s+', ' ', text)
-    text = re.sub(r'\n\s*\d+\s*\n', ' ', text)
-    text = re.sub(r'-\s+', '', text)
-    text = text.replace('"', '"').replace('"', '"')
-    text = text.replace("'", "'").replace("'", "'")
-    return text.strip()
-
 def chunk_text(text_data: Dict) -> List[Dict]:
-    """Create overlapping chunks from PDF text"""
+    """Create chunks from extracted text (Logic unchanged)"""
     chunks = []
-    pages = text_data["pages"]
+    pages = sorted(text_data["pages"], key=lambda x: x["page_num"])
     
     current_chunk = ""
     current_start_page = 1
     current_end_page = 1
     
-    for page_data in pages:
-        page_num = page_data["page_num"]
-        page_text = page_data["text"]
+    for page in pages:
+        page_num = page["page_num"]
+        text = page["text"]
         
-        if not page_text or len(page_text) < 10:
+        if not text:
             continue
-        
-        if current_chunk:
-            current_chunk += " " + page_text
-        else:
-            current_chunk = page_text
+            
+        if not current_chunk:
             current_start_page = page_num
         
+        current_chunk += " " + text
         current_end_page = page_num
         
         while len(current_chunk) >= CHUNK_SIZE:
-            break_point = find_break_point(current_chunk, CHUNK_SIZE)
-            chunk_text = current_chunk[:break_point].strip()
+            split_idx = find_break_point(current_chunk, CHUNK_SIZE)
+            chunk_content = current_chunk[:split_idx].strip()
             
-            if len(chunk_text) >= MIN_CHUNK_SIZE:
+            if len(chunk_content) >= MIN_CHUNK_SIZE:
                 chunks.append({
-                    "text": chunk_text,
+                    "text": chunk_content,
                     "start_page": current_start_page,
                     "end_page": current_end_page
                 })
             
-            overlap_start = max(0, break_point - CHUNK_OVERLAP)
-            current_chunk = current_chunk[overlap_start:]
-            current_start_page = current_end_page # Approximate
-    
+            overlap_idx = max(0, split_idx - CHUNK_OVERLAP)
+            current_chunk = current_chunk[overlap_idx:]
+            current_start_page = current_end_page
+            
     if current_chunk.strip() and len(current_chunk.strip()) >= MIN_CHUNK_SIZE:
         chunks.append({
             "text": current_chunk.strip(),
             "start_page": current_start_page,
             "end_page": current_end_page
         })
-    
+        
     return chunks
 
-def find_break_point(text: str, target_size: int) -> int:
-    """Find smart break point"""
-    if len(text) <= target_size:
+def find_break_point(text: str, target: int) -> int:
+    """Helper to find smart split point"""
+    if len(text) <= target:
         return len(text)
-    
-    search_start = max(0, target_size - 200)
-    search_end = min(len(text), target_size + 200)
-    region = text[search_start:search_end]
-    
-    # Priority: Paragraph -> Sentence -> Newline -> Space
-    for pattern, offset in [('\n\n', 0), ('. ', 2), ('? ', 2), ('! ', 2), ('\n', 0), (' ', 0)]:
-        idx = region.rfind(pattern)
-        if idx != -1:
-            return search_start + idx + offset
-            
-    return target_size
+    window_start = max(0, target - 100)
+    window_end = min(len(text), target + 100)
+    window = text[window_start:window_end]
+    for marker in ['. ', '? ', '! ', '\n']:
+        pos = window.rfind(marker)
+        if pos != -1:
+            return window_start + pos + 1
+    pos = window.rfind(' ')
+    if pos != -1:
+        return window_start + pos
+    return target

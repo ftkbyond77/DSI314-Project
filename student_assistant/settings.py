@@ -87,7 +87,7 @@ DATABASES = {
             "postgresql://student_user:student_pass@db:5432/student_db",
         ),
         conn_max_age=600,
-        ssl_require=RUNNING_ON_AZURE,  # ✅ SSL only when WEBSITE_HOSTNAME is present (Azure)
+        ssl_require=RUNNING_ON_AZURE, 
     )
 }
 
