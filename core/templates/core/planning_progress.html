@@ -121,9 +121,7 @@
 </head>
 <body class="flex items-center justify-center p-8">
     <div class="w-full max-w-3xl">
-        <!-- Main Card -->
         <div class="card-modern p-8">
-            <!-- Header -->
             <div class="text-center mb-8">
                 <div class="inline-block mb-4">
                     <div class="spinner mx-auto"></div>
@@ -132,7 +130,6 @@
                 <p class="text-gray-600">Our AI agents are analyzing your documents and creating your personalized study plan</p>
             </div>
             
-            <!-- Progress Section -->
             <div class="mb-8">
                 <div class="flex justify-between items-center mb-3">
                     <h2 id="statusText" class="text-lg font-semibold text-gray-800">Initializing...</h2>
@@ -144,7 +141,6 @@
                 <p id="detailText" class="text-sm text-gray-600 mt-2">Task ID: {{ task_id }}</p>
             </div>
             
-            <!-- Processing Details Grid -->
             <div class="grid grid-cols-2 gap-4 mb-8">
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
                     <div class="flex items-center gap-3">
@@ -175,7 +171,6 @@
                 </div>
             </div>
             
-            <!-- User Goal Display -->
             {% if params.user_goal %}
             <div class="bg-gray-50 rounded-lg p-4 mb-8">
                 <h3 class="font-semibold text-gray-800 mb-2">Your Goal</h3>
@@ -183,7 +178,6 @@
             </div>
             {% endif %}
             
-            <!-- Activity Log -->
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <h3 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
@@ -196,7 +190,6 @@
                 </div>
             </div>
             
-            <!-- Error Container (hidden) -->
             <div id="errorContainer" class="hidden mt-6 bg-red-50 border-2 border-red-200 rounded-lg p-6">
                 <div class="flex items-start gap-3">
                     <svg class="w-6 h-6 text-red-600 mt-1" fill="currentColor" viewBox="0 0 24 24">
@@ -205,16 +198,15 @@
                     <div class="flex-1">
                         <h3 class="font-semibold text-red-800 mb-2">Processing Error</h3>
                         <p id="errorMessage" class="text-red-700"></p>
-                        <button onclick="window.location.href='{% url 'upload_page_optimized' %}'" 
+                        <button onclick="window.location.reload()" 
                                 class="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
-                            Try Again
+                            Retry
                         </button>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Info Cards -->
         <div class="grid grid-cols-3 gap-4 mt-6">
             <div class="card-modern p-4 text-center">
                 <h4 class="font-semibold text-gray-800 mb-1">AI Analysis</h4>
@@ -328,15 +320,15 @@
         checkStatus();
         pollInterval = setInterval(checkStatus, 2000);
         
-        // Timeout after 5 minutes
+        // CHANGED: Timeout increased to 45 minutes (2700000 ms)
         setTimeout(() => {
             if (!document.getElementById('errorContainer').classList.contains('hidden')) {
                 return; // Already showing error
             }
             
             clearInterval(pollInterval);
-            showError('Processing is taking longer than expected. Your task may still be running in the background. Please check back in a few minutes.');
-        }, 300000);
+            showError('Processing is taking longer than expected. Please click Retry to check if the process has finished.');
+        }, 2700000);
     </script>
 </body>
 </html>

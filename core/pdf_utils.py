@@ -15,7 +15,7 @@ MIN_TEXT_THRESHOLD = 50  # If text chars < this, we force OCR
 OCR_WORKERS = 2  # Keep low to avoid memory overflow on CPU
 MAX_IMAGE_DIMENSION = 2000 # Max dimension for OCR processing
 
-THAI_REC_MODEL_PATH = "../ocr_th_model"
+THAI_REC_MODEL_PATH = "/models/ocr-th-model"
 
 # Setup Logging
 logger = logging.getLogger(__name__)
